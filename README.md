@@ -122,6 +122,18 @@ operario y hora (`pick_unidades`, `pick_falta`, `pick_por`, `pick_at`);
 cada transición queda en `milver_order_eventos`. Los pedidos del portal
 caen solos en la cola como `nuevo` y se van programando al llegar.
 
+### Aviso de faltantes al comisionista
+
+Cuando el operario marca un ítem **sin stock** (`pick_falta`) o lo entrega
+**incompleto** (`pick_unidades < unidades`), el comisionista lo ve en el
+portal sin necesidad de mail ni planilla: el **Inicio** muestra un aviso con
+los pedidos de los últimos 30 días que tienen faltantes (clic → abre el
+pedido en el Historial), y en el **Historial** la tarjeta del pedido lleva un
+badge, un banner y una marca por ítem ("Sin stock" / "Faltan N u.").
+`milver_stats` y `milver_historial` derivan esto en vivo desde las columnas
+de picking — la salida automática (mail/Sheet) queda para cuando se defina el
+destino.
+
 ## Panel de administración (`milver-admin.html`)
 
 PIN demo: **9999**. Pestañas:

@@ -1394,3 +1394,68 @@ body.mv-has-cartbar main {
 .mv-combo-nom { font-weight: 700; color: #1c2733; font-size: 14px; }
 .mv-combo-sub { font-size: 12px; color: #8a97a5; }
 .mv-combo-empty { padding: 10px 14px; font-size: 13px; color: #8a97a5; }
+
+/* ===== Faltantes del picking (aviso al comisionista) ===== */
+.mv-falta-alert {
+  background: #fff4f0;
+  border: 1px solid #f0a99a;
+  border-left: 4px solid #d64524;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 4px 0 16px;
+}
+.mv-falta-tit { font-weight: 800; color: #b53410; margin-bottom: 8px; }
+.mv-falta-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #f0d2c9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+.mv-falta-row:hover { background: #fff8f5; }
+.mv-falta-num { font-weight: 700; color: #123c63; }
+.mv-falta-cli { flex: 1; color: #1c2733; }
+.mv-falta-items { font-size: 12px; color: #b53410; font-weight: 700; }
+.mv-falta-mas { font-size: 12px; color: #8a97a5; margin-top: 4px; }
+
+/* tarjeta de historial con faltante */
+.mv-hist-card-falta > summary { box-shadow: inset 3px 0 0 #d64524; }
+.mv-hist-badge-falta {
+  background: #fdece6;
+  color: #b53410;
+  border: 1px solid #f0a99a;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mv-hist-estado-mini { font-size: 12px; color: #5a6b7b; white-space: nowrap; }
+.mv-hist-alerta {
+  background: #fff4f0;
+  border: 1px solid #f0a99a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  color: #b53410;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mv-hist-item-falta { background: #fff8f5; }
+.mv-item-falta {
+  display: inline-block;
+  background: #d64524;
+  color: #fff;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+}

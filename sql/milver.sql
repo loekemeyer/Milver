@@ -1162,3 +1162,15 @@ begin
       ) p
     ), '[]'::jsonb));
 end $$;
+
+-- ============================================================
+-- v12 — el comisionista ve los faltantes que marcó el depósito.
+-- Un faltante = pick_falta = true (sin stock) o pick_unidades < unidades
+-- (entregado incompleto), sobre líneas ya pickeadas (pick_at not null).
+-- milver_historial: agrega 'estado' por pedido, 'faltantes' (conteo) por
+--   pedido, y por ítem 'pick_unidades'/'pick_falta'/'pick_at'/'faltan'.
+-- milver_stats: agrega 'faltantes' — pedidos de los últimos 30 días con
+--   al menos un ítem faltante, para el aviso del Inicio del comisionista.
+-- Sin salida automática (mail/Sheet): el aviso es in-app. Definiciones
+-- completas desplegadas en la base; regenerar con pg_get_functiondef.
+-- ============================================================
