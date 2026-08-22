@@ -62,6 +62,7 @@ function showSection(id) {
   if (el) el.classList.add("active");
   document.body.classList.toggle("section-carrito", id === "carrito");
   if (id === "carrito") renderCart();
+  updateCartBar();
   if (id === "historial") loadHistorial();
   try {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -306,6 +307,16 @@ function buildCategoriesMenu() {
           `<button type="button" class="dropdown-item" onclick="setCategory('${c}')">${c}</button>`,
       )
       .join("");
+  const chips = $("catChips");
+  if (chips) {
+    chips.innerHTML = ["", ...cats]
+      .map(
+        (c) =>
+          `<button type="button" class="mv-chip${categoryFilter === c ? " mv-chip-on" : ""}"
+                   onclick="setCategory('${c}')">${c || "Todas"}</button>`,
+      )
+      .join("");
+  }
 }
 
 function setCategory(cat) {
@@ -313,6 +324,16 @@ function setCategory(cat) {
   _renderLimit = PAGE_SIZE;
   const menu = $("categoriesMenu");
   if (menu) menu.classList.remove("open");
+  buildCategoriesMenu();
+  renderProducts();
+  showSection("productos");
+}
+
+function clearSearch() {
+  searchTerm = "";
+  const inp = $("navSearch");
+  if (inp) inp.value = "";
+  _renderLimit = PAGE_SIZE;
   renderProducts();
 }
 
@@ -395,33 +416,28 @@ function variantRowHtml(v) {
 
 function buildCard(a) {
   const compra = articleEnSurtido(a);
-  const surtidoBadge = compra
-    ? '<div class="mv-badge-surtido" title="Este cliente le compra este artículo a Milver">★ Te compra</div>'
-    : "";
-  const lkBadge = a.compraLk
-    ? '<div class="mv-badge-lk" title="Artículo que Milver le compra a Loekemeyer">LOEKE</div>'
-    : "";
-  const priceHtml = `
-    <div class="card-prices">
-      <div class="card-price-line">
-        Precio x unidad: <strong>$${formatMoney(a.list_price)}</strong><span class="card-iva"> + IVA</span>
+  const chips =
+    (compra ? '<span class="mv-tag mv-tag-surtido" title="Este cliente le compra este artículo a Milver">★ Te compra</span>' : "") +
+    (a.compraLk ? '<span class="mv-tag mv-tag-lk" title="Artículo que Milver le compra a Loekemeyer">LOEKE</span>' : "") +
+    (a.variantes ? `<span class="mv-tag">${a.variantes.length} variantes</span>` : "");
+  const head = (codLabel) => `
+    <div class="mv-card-head">
+      <div class="mv-card-title">
+        <div class="card-desc">${a.descripcion}</div>
+        <div class="mv-card-meta card-cod">${codLabel}${chips}</div>
+      </div>
+      <div class="mv-card-price card-prices">
+        <strong>$${formatMoney(a.list_price)}</strong>
+        <span class="mv-card-price-sub">x unidad + IVA</span>
       </div>
     </div>
   `;
   if (a.variantes) {
     return `
       <div class="product-card mv-card mv-card-madre${compra ? " mv-card-surtido" : ""}">
-        ${surtidoBadge}${lkBadge}
-        <div class="card-top">
-          <div class="card-row">
-            <div class="card-cod">Cods: <span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span></div>
-          </div>
-          <div class="card-desc">${a.descripcion}</div>
-          <div class="mv-var-badge">${a.variantes.length} variantes</div>
-          ${priceHtml}
-          <div class="mv-var-list">
-            ${a.variantes.map(variantRowHtml).join("")}
-          </div>
+        ${head(`<span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span>`)}
+        <div class="mv-var-list">
+          ${a.variantes.map(variantRowHtml).join("")}
         </div>
       </div>
     `;
@@ -429,20 +445,13 @@ function buildCard(a) {
   const p = a.item;
   const qty = qtyOf(p.cod);
   return `
-    <div class="product-card mv-card${compra ? " mv-card-surtido" : ""}">
-      ${surtidoBadge}${lkBadge}
-      <div class="card-top">
-        <div class="card-row">
-          <div class="card-cod">Cod: <span>${p.cod}</span></div>
-        </div>
-        <div class="card-desc">${p.descripcion}</div>
-        ${priceHtml}
-        <div class="mv-var-qty mv-simple-qty">
-          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', -1)" aria-label="Restar 1 unidad">−</button>
-          <input class="mv-qty-input" id="qty-${p.cod}" type="number" min="0" value="${qty}"
-                 onchange="setQty('${p.cod}', this.value)" aria-label="Unidades" />
-          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
-        </div>
+    <div class="product-card mv-card mv-card-simple${compra ? " mv-card-surtido" : ""}">
+      ${head(`<span>${p.cod}</span>`)}
+      <div class="mv-simple-qty mv-var-qty">
+        <button type="button" class="mv-step" onclick="changeQty('${p.cod}', -1)" aria-label="Restar 1 unidad">−</button>
+        <input class="mv-qty-input" id="qty-${p.cod}" type="number" min="0" value="${qty}"
+               onchange="setQty('${p.cod}', this.value)" aria-label="Unidades" />
+        <button type="button" class="mv-step" onclick="changeQty('${p.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
       </div>
     </div>
   `;
@@ -456,13 +465,24 @@ function renderProducts() {
     container.innerHTML = `
       <div style="padding:24px 40px; color:#666; font-size:14px;">
         Sin resultados${searchTerm.trim() ? ` para "${searchTerm.trim()}"` : ""}.
+        ${searchTerm.trim() ? '<button type="button" class="mv-clear" onclick="clearSearch()">× limpiar</button>' : ""}
       </div>
     `;
+    const info0 = $("catalogInfo");
+    if (info0) info0.textContent = "0 resultados";
     return;
   }
   container.innerHTML = list.slice(0, _renderLimit).map(buildCard).join("");
   const sentinel = $("loadMoreSentinel");
   if (sentinel) sentinel.style.display = list.length > _renderLimit ? "" : "none";
+  const info = $("catalogInfo");
+  if (info && (searchTerm.trim() || categoryFilter)) {
+    info.innerHTML = `${list.length.toLocaleString("es-AR")} resultado${list.length === 1 ? "" : "s"}` +
+      (searchTerm.trim() ? ` para "${searchTerm.trim()}" <button type="button" class="mv-clear" onclick="clearSearch()">× limpiar</button>` : "");
+  } else if (info) {
+    const nVar = articles.filter((x) => x.variantes).length;
+    info.textContent = `${products.length.toLocaleString("es-AR")} ítems · ${articles.length.toLocaleString("es-AR")} artículos (${nVar} con variantes)`;
+  }
 }
 
 // Scroll infinito: renderizar 4.250 cards de una cuelga el navegador,
@@ -521,6 +541,30 @@ function changeQty(cod, delta) {
 function updateCartCount() {
   const el = $("cartCount");
   if (el) el.textContent = cart.reduce((s, i) => s + i.qty, 0);
+  updateCartBar();
+}
+
+// Barra fija de abajo: total del pedido siempre a la vista y a un toque.
+function updateCartBar() {
+  const bar = $("cartBar");
+  if (!bar) return;
+  const enCarrito = $("carrito")?.classList.contains("active") || $("pedidoConfirmado")?.classList.contains("active");
+  if (!cart.length || enCarrito || !session) {
+    bar.style.display = "none";
+    document.body.classList.remove("mv-has-cartbar");
+    return;
+  }
+  const t = cartTotals();
+  const uni = cart.reduce((s, i) => s + i.qty, 0);
+  const info = $("cartBarInfo");
+  if (info) {
+    info.textContent = `${cart.length} art. · ${formatMoney(uni)} u. · $${formatMoney(t.total)} + IVA`;
+  }
+  bar.style.display = "";
+  document.body.classList.add("mv-has-cartbar");
+  bar.classList.remove("mv-pulse");
+  void bar.offsetWidth; // reinicia la animación
+  bar.classList.add("mv-pulse");
 }
 
 function getDtoVol() {
@@ -546,7 +590,11 @@ function renderCart() {
   if (!box) return;
 
   if (!cart.length) {
-    box.innerHTML = `<div class="mv-cart-empty">El pedido está vacío. Agregá artículos desde Productos.</div>`;
+    box.innerHTML = `<div class="mv-cart-empty">El pedido está vacío. Agregá artículos desde Productos.` +
+      (clienteSel
+        ? ` <button type="button" class="mv-clear" onclick="repetirUltimoPedido()">↻ Repetir último pedido de ${clienteSel.razon_social}</button>`
+        : "") +
+      `</div>`;
     if (totalsBox) totalsBox.innerHTML = "";
     if (submitBtn) submitBtn.disabled = true;
     return;
@@ -639,6 +687,28 @@ function nuevoPedido() {
   renderProducts();
 }
 
+// Carga en el carrito las cantidades del último pedido del cliente elegido.
+async function repetirUltimoPedido() {
+  if (!session || !clienteSel) return;
+  const { data, error } = await supabaseClient.rpc("milver_historial", {
+    p_comisionista_id: session.id,
+    p_pin: session.pin,
+  });
+  if (error || !data?.ok) {
+    alert("No se pudo leer el historial.");
+    return;
+  }
+  const ultimo = (data.pedidos || []).find((p) => p.cliente_cod === clienteSel.cod);
+  if (!ultimo || !(ultimo.items || []).length) {
+    alert(`${clienteSel.razon_social} todavía no tiene pedidos.`);
+    return;
+  }
+  for (const it of ultimo.items) {
+    if (findProduct(it.cod)) setQty(it.cod, it.unidades);
+  }
+  renderCart();
+}
+
 /***********************
  * HISTORIAL
  ***********************/
@@ -697,6 +767,8 @@ async function loadHistorial() {
  * INIT
  ***********************/
 document.addEventListener("DOMContentLoaded", () => {
+  const ver = $("mvVersion");
+  if (ver && typeof MILVER_VERSION !== "undefined") ver.textContent = "v" + MILVER_VERSION;
   restoreSession();
   loadCatalog();
   if (session) loadClientes();
@@ -741,6 +813,8 @@ window.showSection = showSection;
 window.doLogin = doLogin;
 window.logout = logout;
 window.setCategory = setCategory;
+window.clearSearch = clearSearch;
+window.repetirUltimoPedido = repetirUltimoPedido;
 window.setSortMode = setSortMode;
 window.changeQty = changeQty;
 window.setQty = setQty;

@@ -672,3 +672,242 @@
 .mva-mini-btn {
   touch-action: manipulation;
 }
+
+/* ============================================================
+   v1.6 — pasada de modernización para el laburo del comisionista
+   ============================================================ */
+
+.mv-version {
+  font-size: 11px;
+  color: #8fa8c0;
+  margin-left: 8px;
+  vertical-align: super;
+}
+
+/* Cards compactas: título a la izquierda, precio a la derecha */
+.mv-card {
+  border-radius: 14px;
+  border: 1px solid #e5eaf0;
+  box-shadow: 0 1px 3px rgba(18, 60, 99, 0.06);
+  text-align: left;
+  padding: 12px 14px;
+}
+.mv-card:hover {
+  box-shadow: 0 3px 10px rgba(18, 60, 99, 0.1);
+}
+.mv-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mv-card-title {
+  min-width: 0;
+}
+.mv-card .card-desc {
+  min-height: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1c2733;
+  line-height: 1.25;
+}
+.mv-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8a97a5;
+}
+.mv-card-meta > span:first-child {
+  font-weight: 600;
+}
+.mv-tag {
+  background: #eef4fa;
+  color: #123c63;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border-radius: 8px;
+  padding: 2px 7px;
+}
+.mv-tag-lk {
+  background: #123c63;
+  color: #fff;
+}
+.mv-tag-surtido {
+  background: #1a7f37;
+  color: #fff;
+}
+.mv-card-price {
+  text-align: right;
+  flex-shrink: 0;
+}
+.mv-card-price strong {
+  font-size: 17px;
+  color: #123c63;
+}
+.mv-card-price-sub {
+  display: block;
+  font-size: 10px;
+  color: #8a97a5;
+}
+.mv-card-simple {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-direction: row;
+}
+.mv-card-simple .mv-card-head {
+  flex: 1;
+  min-width: 0;
+}
+.mv-card-simple .mv-simple-qty {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.mv-var-list {
+  margin-top: 10px;
+}
+.mv-var-row:hover {
+  background: #f6f9fc;
+}
+.mv-var-surtido:hover {
+  background: #e3f1e6;
+}
+
+/* Chips de categorías */
+.mv-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 24px 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mv-chips::-webkit-scrollbar {
+  display: none;
+}
+.mv-chip {
+  border: 1px solid #ccd5df;
+  background: #fff;
+  color: #123c63;
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mv-chip-on {
+  background: #123c63;
+  color: #fff;
+  border-color: #123c63;
+}
+
+/* Limpiar búsqueda */
+.mv-clear {
+  border: none;
+  background: #eef4fa;
+  color: #123c63;
+  border-radius: 10px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Barra fija del pedido en curso */
+.mv-cartbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: #123c63;
+  color: #fff;
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(18, 60, 99, 0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.mv-cartbar-info {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mv-cartbar-btn {
+  background: #e8112d;
+  border-radius: 10px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+body.mv-has-cartbar main {
+  padding-bottom: 76px;
+}
+@keyframes mvPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+.mv-pulse {
+  animation: mvPulse 0.25s ease;
+}
+
+/* iOS: input con fuente <16px zoomea al enfocar — 16px lo evita */
+@media (max-width: 900px) {
+  .mv-qty-input,
+  .mv-input,
+  .mv-select,
+  #navSearch {
+    font-size: 16px !important;
+  }
+  .mv-step {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+  }
+  .mv-qty-input {
+    width: 48px;
+  }
+}
+
+/* LK arma .product-card como flex column centrado y empuja el último
+   hijo al fondo (margin-top:auto) — para fotos. Acá rompe las cards
+   sin foto: título centrado y un hueco antes del stepper. Se anula. */
+.mv-card {
+  align-items: stretch !important;
+  min-height: 0 !important;
+}
+.mv-card > :last-child {
+  margin-top: 0 !important;
+}
+.mv-card .mv-var-list {
+  margin-top: 10px !important;
+}
+.mv-card-simple {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px;
+}
+.mv-card-simple .mv-card-head {
+  flex: 1 1 auto;
+  width: auto;
+}
