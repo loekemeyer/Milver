@@ -404,7 +404,7 @@ function variantRowHtml(v) {
     <div class="mv-var-row mv-tap${compra ? " mv-var-surtido" : ""}${qty > 0 ? " mv-var-conqty" : ""}"
          id="var-${v.cod}" onclick="tapAdd('${v.cod}')" role="button" tabindex="0">
       <span class="mv-var-name">${compra ? '<span class="mv-star">★</span> ' : ""}${v.variante || v.descripcion}</span>
-      <span class="mv-var-bigqty" id="bigqty-${v.cod}">${qty}</span>
+      <span class="mv-var-bigqty" id="bigqty-${v.cod}">${qty > 0 ? qty : ""}</span>
       <button type="button" class="mv-qty-edit" onclick="event.stopPropagation();abrirQtyPicker('${v.cod}')" aria-label="Editar cantidad">✎</button>
     </div>
   `;
@@ -441,8 +441,8 @@ function buildCard(a) {
       </div>
       <div class="mv-card-meta2"><span class="mv-tag mv-tag-plain">Cod ${p.cod}</span>${tags}</div>
       <div class="mv-card-qtyrow">
-        <span class="mv-bigqty" id="bigqty-${p.cod}">${qty}</span>
-        <span class="mv-bigqty-lbl">unidades</span>
+        <span class="mv-bigqty" id="bigqty-${p.cod}">${qty > 0 ? qty : ""}</span>
+        <span class="mv-bigqty-lbl">${qty > 0 ? "unidades" : "tocá para sumar"}</span>
         <button type="button" class="mv-qty-edit" onclick="event.stopPropagation();abrirQtyPicker('${p.cod}')" aria-label="Editar cantidad">✎</button>
       </div>
     </div>
@@ -520,9 +520,13 @@ function setQty(cod, value) {
     });
   }
   const big = $("bigqty-" + cod);
-  if (big) big.textContent = qty;
+  if (big) big.textContent = qty > 0 ? qty : "";
   const card = $("card-" + cod);
-  if (card) card.classList.toggle("mv-card-conqty", qty > 0);
+  if (card) {
+    card.classList.toggle("mv-card-conqty", qty > 0);
+    const lbl = card.querySelector(".mv-bigqty-lbl");
+    if (lbl) lbl.textContent = qty > 0 ? "unidades" : "tocá para sumar";
+  }
   const varRow = $("var-" + cod);
   if (varRow) varRow.classList.toggle("mv-var-conqty", qty > 0);
   updateCartCount();
@@ -567,7 +571,14 @@ function abrirQtyPicker(cod) {
     precio.textContent = `Cod ${p.cod} · $${formatMoney(neto)} x unidad + IVA`;
   }
   const actual = qtyOf(cod);
-  if (inp) inp.value = actual > 0 ? actual : "";
+  if (inp) {
+    inp.value = actual > 0 ? actual : "";
+    // Seleccionar todo apenas se enfoca o se toca: así, aunque el dedo caiga
+    // sobre el margen izquierdo del campo, el primer dígito REEMPLAZA en vez
+    // de anteponerse al valor (evita "05" o "50" por error de tipeo).
+    inp.onfocus = () => inp.select();
+    inp.onpointerup = (e) => { e.preventDefault(); inp.select(); };
+  }
   if (modal) modal.style.display = "";
   if (inp) {
     inp.focus();
