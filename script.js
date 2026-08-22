@@ -1339,8 +1339,12 @@ function renderHistorial(codForzado) {
  * INIT
  ***********************/
 document.addEventListener("DOMContentLoaded", () => {
-  const ver = $("mvVersion");
-  if (ver && typeof MILVER_VERSION !== "undefined") ver.textContent = "v" + MILVER_VERSION;
+  if (typeof MILVER_VERSION !== "undefined") {
+    const ver = $("mvVersion");
+    if (ver) ver.textContent = "v" + MILVER_VERSION;
+    const lver = $("loginVersion");
+    if (lver) lver.textContent = "v" + MILVER_VERSION;
+  }
   restoreSession();
   loadCatalog();
   if (session) {
