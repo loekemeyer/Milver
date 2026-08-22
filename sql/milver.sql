@@ -1189,3 +1189,14 @@ end $$;
 -- Listas públicas para poblar los desplegables (solo id + nombre de activos,
 -- el PIN nunca sale de acá): milver_comisionistas_pub(), milver_operarios_pub().
 -- ============================================================
+
+-- ============================================================
+-- v14 — los operarios entran SIN PIN.
+-- milver_dep_ok(p) ahora devuelve true si p es el nombre de un operario
+-- activo del padrón (acceso directo); por compatibilidad sigue aceptando el
+-- PIN de depósito viejo (con su rate limit). milver_dep_login usa ese gate.
+-- El resto de las RPC de depósito no cambian de firma: el cliente pasa el
+-- nombre del operario donde antes pasaba el PIN (sessionStorage milver_dep_pin
+-- guarda el nombre). El login del portal (rol Armador) y el standalone del
+-- depósito ya no piden PIN.
+-- ============================================================
