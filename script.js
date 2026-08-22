@@ -256,19 +256,46 @@ async function loadClientes() {
           }</option>`,
       )
       .join("");
-  for (const id of ["clienteSelect", "clienteSelectTop"]) {
-    const sel = $(id);
-    if (sel) sel.innerHTML = opts;
-  }
+  const sel = $("clienteSelect");
+  if (sel) sel.innerHTML = opts;
+  renderClientesCombo("");
 }
+
+// ---- Combobox de cliente con búsqueda (toolbar de productos) ----
+function renderClientesCombo(q) {
+  const drop = $("clienteDropdown");
+  if (!drop) return;
+  const t = (q || "").toLowerCase().trim();
+  const list = t
+    ? clientes.filter((c) => c.razon_social.toLowerCase().includes(t) || c.cod.toLowerCase().includes(t) || (c.localidad || "").toLowerCase().includes(t))
+    : clientes;
+  if (!clientes.length) {
+    drop.innerHTML = '<div class="mv-combo-empty">Sin clientes en tu cartera.</div>';
+    return;
+  }
+  drop.innerHTML = list.slice(0, 60).map((c) =>
+    `<button type="button" class="mv-combo-item" onclick="elegirClienteCombo('${c.cod}')">
+       <span class="mv-combo-nom">${c.razon_social}</span>
+       <span class="mv-combo-sub">${c.cod}${c.localidad ? " · " + c.localidad : ""}${Number(c.dto_vol) > 0 ? " · " + Math.round(c.dto_vol * 100) + "% dto" : ""}</span>
+     </button>`).join("") +
+    (list.length > 60 ? `<div class="mv-combo-empty">Afiná la búsqueda (${list.length} coinciden).</div>` : "") +
+    (!list.length ? '<div class="mv-combo-empty">Sin coincidencias.</div>' : "");
+}
+function filtrarClientesCombo(q) { abrirClientesCombo(); renderClientesCombo(q); }
+function abrirClientesCombo() { const d = $("clienteDropdown"); if (d) d.style.display = ""; }
+function cerrarClientesCombo() { const d = $("clienteDropdown"); if (d) d.style.display = "none"; }
+function elegirClienteCombo(cod) { setCliente(cod); cerrarClientesCombo(); }
+function limpiarClienteCombo() { setCliente(""); const i = $("clienteBuscar"); if (i) i.value = ""; renderClientesCombo(""); }
 
 // Elegir cliente carga su surtido (qué le compra a Milver) y marca el catálogo.
 async function setCliente(cod) {
   clienteSel = clientes.find((c) => c.cod === cod) || null;
-  for (const id of ["clienteSelect", "clienteSelectTop"]) {
-    const sel = $(id);
-    if (sel && sel.value !== (cod || "")) sel.value = cod || "";
-  }
+  const sel = $("clienteSelect");
+  if (sel && sel.value !== (cod || "")) sel.value = cod || "";
+  const inp = $("clienteBuscar");
+  if (inp) inp.value = clienteSel ? `${clienteSel.razon_social} (${clienteSel.cod})` : "";
+  const clr = $("clienteClear");
+  if (clr) clr.style.display = clienteSel ? "" : "none";
   surtidoSet = new Set();
   if (!clienteSel) soloSurtido = false;
   syncSurtidoBar();
@@ -1200,6 +1227,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   setupInfiniteScroll();
 
+  // Avisar antes de cerrar/recargar si hay un pedido a medio cargar.
+  window.addEventListener("beforeunload", (e) => {
+    if (cart.length) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  // PWA: registrar el service worker para instalación y caché offline.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
   const search = $("navSearch");
   if (search) {
     let t = null;
@@ -1213,6 +1250,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 200);
     });
   }
+
+  document.addEventListener("click", (e) => {
+    const combo = $("clienteCombo");
+    if (combo && !combo.contains(e.target)) cerrarClientesCombo();
+  });
 
   const catBtn = $("categoriesBtn");
   const catMenu = $("categoriesMenu");
@@ -1260,6 +1302,10 @@ window.qtyConfirmar = qtyConfirmar;
 window.qtyQuitar = qtyQuitar;
 window.setQty = setQty;
 window.setCliente = setCliente;
+window.filtrarClientesCombo = filtrarClientesCombo;
+window.abrirClientesCombo = abrirClientesCombo;
+window.elegirClienteCombo = elegirClienteCombo;
+window.limpiarClienteCombo = limpiarClienteCombo;
 window.toggleSoloSurtido = toggleSoloSurtido;
 window.submitOrder = submitOrder;
 window.nuevoPedido = nuevoPedido;

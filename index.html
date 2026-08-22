@@ -10,8 +10,14 @@
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
-    <link rel="stylesheet" href="css/styles.css?v=17" />
-    <link rel="stylesheet" href="css/milver.css?v=17" />
+    <link rel="apple-touch-icon" href="img/logo-milver.jpg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#123c63" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Milver" />
+    <link rel="stylesheet" href="css/styles.css?v=18" />
+    <link rel="stylesheet" href="css/milver.css?v=18" />
   </head>
 
   <body>
@@ -136,9 +142,13 @@
         <div class="mv-toolbar">
           <div id="catalogInfo" class="mv-catalog-info">Cargando catálogo…</div>
           <div class="mv-toolbar-right">
-            <select id="clienteSelectTop" class="mv-select" onchange="setCliente(this.value)" title="Cliente para el que estás cargando el pedido">
-              <option value="">— Elegí un cliente —</option>
-            </select>
+            <div class="mv-combo" id="clienteCombo">
+              <input id="clienteBuscar" class="mv-input mv-combo-input" type="text"
+                     placeholder="Cliente para el pedido…" autocomplete="off"
+                     oninput="filtrarClientesCombo(this.value)" onfocus="abrirClientesCombo()" />
+              <button type="button" id="clienteClear" class="mv-combo-clear" style="display:none" onclick="limpiarClienteCombo()">✕</button>
+              <div id="clienteDropdown" class="mv-combo-drop" style="display:none"></div>
+            </div>
             <button type="button" id="soloSurtidoBtn" class="mv-toggle" style="display:none" onclick="toggleSoloSurtido()"></button>
           </div>
         </div>
@@ -248,8 +258,8 @@
     </button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="version.js?v=17"></script>
+    <script src="version.js?v=18"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=17"></script>
+    <script src="script.js?v=18"></script>
   </body>
 </html>

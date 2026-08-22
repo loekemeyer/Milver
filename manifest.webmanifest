@@ -1,0 +1,14 @@
+{
+  "name": "Milver · Pedidos",
+  "short_name": "Milver",
+  "description": "Portal de carga de pedidos para comisionistas de Milver.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#123c63",
+  "theme_color": "#123c63",
+  "icons": [
+    { "src": "img/logo-milver.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" }
+  ]
+}
