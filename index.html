@@ -10,8 +10,8 @@
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
-    <link rel="stylesheet" href="css/styles.css?v=10" />
-    <link rel="stylesheet" href="css/milver.css?v=10" />
+    <link rel="stylesheet" href="css/styles.css?v=11" />
+    <link rel="stylesheet" href="css/milver.css?v=11" />
   </head>
 
   <body>
@@ -47,6 +47,10 @@
             </button>
             <div id="categoriesMenu" class="dropdown-menu"></div>
           </div>
+
+          <button type="button" class="nav-link" onclick="showSection('inicio')">
+            Inicio
+          </button>
 
           <button type="button" class="nav-link" onclick="showSection('productos')">
             Productos
@@ -100,8 +104,35 @@
     </div>
 
     <main>
+      <!-- INICIO (dashboard del comisionista) -->
+      <section id="inicio" class="section active">
+        <div class="mv-inicio">
+          <h2 class="mv-inicio-hola" id="inicioHola">Hola</h2>
+
+          <div class="mv-inicio-acciones">
+            <button type="button" class="mv-accion mv-accion-primary" onclick="showSection('productos')">
+              <span class="mv-accion-ico">🛒</span>
+              <span class="mv-accion-txt">Cargar nuevo pedido</span>
+            </button>
+            <button type="button" class="mv-accion" onclick="showSection('historial')">
+              <span class="mv-accion-ico">📋</span>
+              <span class="mv-accion-txt">Ver pedidos anteriores</span>
+            </button>
+          </div>
+
+          <div class="mv-stats-grid" id="inicioStats"></div>
+
+          <div class="mv-stats-serie" id="inicioSerie"></div>
+
+          <div class="mv-stats-top">
+            <h3>Tus mejores clientes (30 días)</h3>
+            <div id="inicioTop"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- PRODUCTOS -->
-      <section id="productos" class="section active">
+      <section id="productos" class="section">
         <div class="mv-toolbar">
           <div id="catalogInfo" class="mv-catalog-info">Cargando catálogo…</div>
           <div class="mv-toolbar-right">
@@ -171,6 +202,10 @@
       <!-- HISTORIAL -->
       <section id="historial" class="section">
         <h2 class="mv-h2">Historial de pedidos</h2>
+        <div class="mv-hist-filtro">
+          <input id="histBuscar" class="mv-input" type="search" placeholder="Filtrar por cliente…" oninput="renderHistorial()" />
+          <select id="histCliente" class="mv-select" onchange="filtrarHistCliente(this.value)"></select>
+        </div>
         <div id="historialLista" class="mv-historial"></div>
       </section>
     </main>
@@ -202,8 +237,8 @@
       <span class="mv-cartbar-btn">Ver pedido →</span>
     </button>
 
-    <script src="version.js?v=10"></script>
+    <script src="version.js?v=11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=10"></script>
+    <script src="script.js?v=11"></script>
   </body>
 </html>

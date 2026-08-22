@@ -28,6 +28,17 @@ El buscador matchea **código exacto** cuando se tipea un código (`506`
 encuentra `L506` y el `506` demo; `12` no trae `512`) y por **descripción**
 en cualquier otro caso.
 
+## Pantalla de Inicio (dashboard del comisionista)
+
+Al loguearse, el comisionista cae en **Inicio** con:
+- Dos accesos grandes: **Cargar nuevo pedido** y **Ver pedidos anteriores**.
+- Tarjetas de **esta semana**, **este mes**, clientes activos e histórico.
+- Mini-gráfico de barras de ventas de los últimos 8 días.
+- Top 5 clientes del mes.
+
+El **Historial** suma filtro por cliente (buscador + desplegable). Datos
+desde la RPC `milver_stats` (todo acotado a los pedidos del comisionista).
+
 ## Comisionistas y carteras
 
 La página NO es para el cliente final: la usa el **comisionista**, que carga

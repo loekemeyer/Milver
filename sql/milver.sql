@@ -1010,3 +1010,7 @@ insert into public.milver_settings values ('deposito_pin_hash', extensions.crypt
 -- milver_dep_pedidos y milver_dep_evento están desplegadas en la base.
 -- Para regenerar el archivo entero: volcar con pg_get_functiondef todas
 -- las funciones milver_* (la base es la fuente de verdad, igual que en LK).
+
+-- v7 — estadísticas del comisionista para la pantalla de Inicio
+-- (semana / mes / histórico / top clientes / serie de 8 días).
+-- Definición desplegada en la base; regenerar con pg_get_functiondef milver_stats.

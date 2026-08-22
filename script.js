@@ -56,13 +56,14 @@ function codMatch(cod, q) {
  * SECCIONES (mismo patrón que LK: .section + .active)
  ***********************/
 function showSection(id) {
-  if ((id === "carrito" || id === "historial") && !session) return;
+  if ((id === "carrito" || id === "historial" || id === "inicio") && !session) return;
   document.querySelectorAll(".section").forEach((s) => s.classList.remove("active"));
   const el = $(id);
   if (el) el.classList.add("active");
   document.body.classList.toggle("section-carrito", id === "carrito");
   if (id === "carrito") renderCart();
   updateCartBar();
+  if (id === "inicio") loadInicio();
   if (id === "historial") loadHistorial();
   try {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -134,6 +135,7 @@ async function doLogin() {
   syncLoginUI();
   loadClientes();
   renderProducts();
+  showSection("inicio");
 }
 
 function logout() {
@@ -779,6 +781,74 @@ async function repetirUltimoPedido() {
 }
 
 /***********************
+ * INICIO (dashboard del comisionista)
+ ***********************/
+let _histPedidos = [];
+
+async function loadInicio() {
+  if (!session) return;
+  const hola = $("inicioHola");
+  if (hola) hola.textContent = "Hola, " + session.nombre + " 👋";
+  const statsBox = $("inicioStats");
+  if (statsBox) statsBox.innerHTML = '<div class="mv-stats-cargando">Cargando estadísticas…</div>';
+  const { data, error } = await supabaseClient.rpc("milver_stats", {
+    p_comisionista_id: session.id,
+    p_pin: session.pin,
+  });
+  if (error || !data?.ok) {
+    if (statsBox) statsBox.innerHTML = '<div class="mv-cart-empty">No se pudieron cargar las estadísticas.</div>';
+    return;
+  }
+  const sem = data.semana || {}, mes = data.mes || {}, tot = data.total || {};
+  if (statsBox) {
+    statsBox.innerHTML = [
+      ["Esta semana", `$${formatMoney(sem.total)}`, `${sem.pedidos || 0} pedidos · ${formatMoney(sem.unidades)} u.`],
+      ["Este mes", `$${formatMoney(mes.total)}`, `${mes.pedidos || 0} pedidos · ${formatMoney(mes.unidades)} u.`],
+      ["Clientes activos", `${data.clientes_activos || 0}`, "últimos 30 días"],
+      ["Histórico", `$${formatMoney(tot.total)}`, `${tot.pedidos || 0} pedidos`],
+    ].map(([t, v, s]) => `
+      <div class="mv-stat">
+        <div class="mv-stat-tit">${t}</div>
+        <div class="mv-stat-num">${v}</div>
+        <div class="mv-stat-sub">${s}</div>
+      </div>`).join("");
+  }
+  // mini-gráfico de barras de los últimos 8 días
+  const serie = data.serie || [];
+  const serieBox = $("inicioSerie");
+  if (serieBox) {
+    if (!serie.length || serie.every((d) => !Number(d.total))) {
+      serieBox.innerHTML = "";
+    } else {
+      const max = Math.max(...serie.map((d) => Number(d.total)), 1);
+      serieBox.innerHTML =
+        '<h3>Ventas últimos 8 días</h3><div class="mv-bars">' +
+        serie.map((d) => {
+          const h = Math.round((Number(d.total) / max) * 100);
+          const dia = new Date(d.fecha).toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "");
+          return `<div class="mv-bar-col" title="${dia}: $${formatMoney(d.total)}">
+            <div class="mv-bar" style="height:${Math.max(h, 2)}%"></div>
+            <div class="mv-bar-lbl">${dia}</div>
+          </div>`;
+        }).join("") +
+        "</div>";
+    }
+  }
+  const topBox = $("inicioTop");
+  if (topBox) {
+    const top = data.top_clientes || [];
+    topBox.innerHTML = top.length
+      ? top.map((c, i) => `
+        <div class="mv-top-row">
+          <span class="mv-top-pos">${i + 1}</span>
+          <span class="mv-top-nom">${c.cliente}</span>
+          <span class="mv-top-tot">$${formatMoney(c.total)}</span>
+        </div>`).join("")
+      : '<div class="mv-cart-empty">Todavía no cargaste pedidos este mes.</div>';
+  }
+}
+
+/***********************
  * HISTORIAL
  ***********************/
 async function loadHistorial() {
@@ -793,9 +863,34 @@ async function loadHistorial() {
     box.innerHTML = `<div class="mv-cart-empty">Error cargando historial.</div>`;
     return;
   }
-  const pedidos = data.pedidos || [];
+  _histPedidos = data.pedidos || [];
+  // poblar el filtro de clientes con los que tienen pedidos
+  const sel = $("histCliente");
+  if (sel) {
+    const vistos = new Map();
+    for (const o of _histPedidos) if (!vistos.has(o.cliente_cod)) vistos.set(o.cliente_cod, o.cliente);
+    sel.innerHTML = '<option value="">Todos los clientes</option>' +
+      [...vistos].map(([cod, nom]) => `<option value="${cod}">${nom}</option>`).join("");
+  }
+  renderHistorial();
+}
+
+function filtrarHistCliente(cod) {
+  const inp = $("histBuscar");
+  if (inp) inp.value = "";
+  renderHistorial(cod);
+}
+
+function renderHistorial(codForzado) {
+  const box = $("historialLista");
+  if (!box) return;
+  const q = ($("histBuscar")?.value || "").toLowerCase().trim();
+  const codSel = codForzado !== undefined ? codForzado : ($("histCliente")?.value || "");
+  let pedidos = _histPedidos;
+  if (codSel) pedidos = pedidos.filter((o) => o.cliente_cod === codSel);
+  if (q) pedidos = pedidos.filter((o) => (o.cliente || "").toLowerCase().includes(q) || String(o.numero).includes(q));
   if (!pedidos.length) {
-    box.innerHTML = `<div class="mv-cart-empty">Todavía no cargaste pedidos.</div>`;
+    box.innerHTML = `<div class="mv-cart-empty">${_histPedidos.length ? "Sin pedidos para ese filtro." : "Todavía no cargaste pedidos."}</div>`;
     return;
   }
   box.innerHTML = pedidos
@@ -840,7 +935,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (ver && typeof MILVER_VERSION !== "undefined") ver.textContent = "v" + MILVER_VERSION;
   restoreSession();
   loadCatalog();
-  if (session) loadClientes();
+  if (session) {
+    loadClientes();
+    showSection("inicio");
+  }
   setupInfiniteScroll();
 
   const search = $("navSearch");
@@ -891,6 +989,9 @@ window.logout = logout;
 window.setCategory = setCategory;
 window.clearSearch = clearSearch;
 window.repetirUltimoPedido = repetirUltimoPedido;
+window.loadInicio = loadInicio;
+window.renderHistorial = renderHistorial;
+window.filtrarHistCliente = filtrarHistCliente;
 window.setSortMode = setSortMode;
 window.changeQty = changeQty;
 window.tapAdd = tapAdd;
