@@ -114,16 +114,16 @@ function setRole(role) {
   document.querySelectorAll(".mv-role-tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.role === role));
   const field = $("loginNombreField");
+  const pinField = $("loginPinField");
   const label = $("loginNombreLabel");
   const errBox = $("loginError");
   if (errBox) errBox.style.display = "none";
   const pinInp = $("loginPin");
   if (pinInp) pinInp.value = "";
-  if (role === "admin") {
-    if (field) field.style.display = "none";
-    return;
-  }
-  if (field) field.style.display = "";
+  // Admin: solo PIN. Armador: solo nombre (sin PIN). Comisionista: nombre + PIN.
+  if (field) field.style.display = role === "admin" ? "none" : "";
+  if (pinField) pinField.style.display = role === "armador" ? "none" : "";
+  if (role === "admin") return;
   if (label) label.textContent = role === "armador" ? "Operario" : "Comisionista";
   poblarLoginNombres(role);
 }
@@ -162,10 +162,10 @@ async function doLogin() {
     if (btn) btn.disabled = false;
     if (errBox) { errBox.textContent = msg; errBox.style.display = ""; }
   };
-  if (!pin) return falla("Ingresá el PIN.");
 
   // --- ADMIN: solo PIN → panel de administración ---
   if (loginRole === "admin") {
+    if (!pin) return falla("Ingresá el PIN.");
     if (btn) btn.disabled = true;
     const r = await supabaseClient.rpc("milver_admin_login", { p_pin: pin });
     if (r.data?.ok) {
@@ -179,22 +179,24 @@ async function doLogin() {
   const nombre = ($("loginNombre")?.value || "").trim();
   if (!nombre) return falla("Elegí tu nombre de la lista.");
 
-  // --- ARMADOR: nombre de operario + PIN de depósito → panel de depósito ---
+  // --- ARMADOR: solo nombre de operario (sin PIN) → panel de depósito ---
   if (loginRole === "armador") {
     if (btn) btn.disabled = true;
-    const r = await supabaseClient.rpc("milver_dep_login", { p_pin: pin });
+    // La credencial del depósito es el propio nombre del operario.
+    const r = await supabaseClient.rpc("milver_dep_login", { p_pin: nombre });
     if (r.data?.ok) {
       try {
-        sessionStorage.setItem("milver_dep_pin", pin);
+        sessionStorage.setItem("milver_dep_pin", nombre);
         sessionStorage.setItem("milver_dep_operario", nombre);
       } catch (e) {}
       location.href = "milver-deposito.html";
       return;
     }
-    return falla("PIN de depósito incorrecto.");
+    return falla(r.data?.error || "Operario no válido.");
   }
 
   // --- COMISIONISTA: nombre + PIN → portal ---
+  if (!pin) return falla("Ingresá el PIN.");
   if (btn) btn.disabled = true;
   const { data, error } = await supabaseClient.rpc("milver_login", {
     p_nombre: nombre,

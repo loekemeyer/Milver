@@ -75,24 +75,24 @@ function setOperarioTag() {
 
 async function doLogin() {
   const nom = ($("loginOperario")?.value || "").trim();
-  const pin = ($("loginPin")?.value || "").trim();
   const err = $("loginError");
-  if (!nom || !pin) {
-    if (err) { err.textContent = "Completá tu nombre y el PIN."; err.style.display = ""; }
+  if (!nom) {
+    if (err) { err.textContent = "Elegí tu nombre de la lista."; err.style.display = ""; }
     return;
   }
   const btn = $("loginBtn");
   if (btn) btn.disabled = true;
-  const r = await rpc("milver_dep_login", { p_pin: pin });
+  // Los operarios entran sin PIN: la credencial es el propio nombre.
+  const r = await rpc("milver_dep_login", { p_pin: nom });
   if (btn) btn.disabled = false;
   if (!r.ok) {
-    if (err) { err.textContent = r.error || "PIN incorrecto"; err.style.display = ""; }
+    if (err) { err.textContent = r.error || "Operario no válido"; err.style.display = ""; }
     return;
   }
-  depPin = pin;
+  depPin = nom;
   operario = nom;
   try {
-    sessionStorage.setItem("milver_dep_pin", pin);
+    sessionStorage.setItem("milver_dep_pin", nom);
     sessionStorage.setItem("milver_dep_operario", nom);
   } catch (e) {}
   setOperarioTag();

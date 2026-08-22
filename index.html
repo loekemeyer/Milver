@@ -16,8 +16,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Milver" />
-    <link rel="stylesheet" href="css/styles.css?v=22" />
-    <link rel="stylesheet" href="css/milver.css?v=22" />
+    <link rel="stylesheet" href="css/styles.css?v=23" />
+    <link rel="stylesheet" href="css/milver.css?v=23" />
   </head>
 
   <body>
@@ -106,8 +106,10 @@
           <select id="loginNombre" class="mv-select"></select>
         </div>
 
-        <label class="mv-label" for="loginPin">PIN</label>
-        <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+        <div id="loginPinField">
+          <label class="mv-label" for="loginPin">PIN</label>
+          <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+        </div>
 
         <div id="loginError" class="mv-login-error" style="display:none"></div>
 
@@ -270,8 +272,8 @@
     </button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="version.js?v=22"></script>
+    <script src="version.js?v=23"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=22"></script>
+    <script src="script.js?v=23"></script>
   </body>
 </html>

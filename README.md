@@ -44,15 +44,17 @@ desde la RPC `milver_stats` (todo acotado a los pedidos del comisionista).
 El portal (`index.html`) abre con **tres botones de rol**:
 
 - **Comisionista** — elige su nombre de una lista desplegable + PIN → entra al portal.
-- **Armador de pedidos** — elige su nombre de operario de una lista + PIN de
-  depósito → redirige a `milver-deposito.html` (con la sesión ya seteada).
+- **Armador de pedidos** — elige su nombre de operario de una lista (**sin
+  PIN**) → redirige a `milver-deposito.html` (con la sesión ya seteada).
 - **Admin** — solo PIN → redirige a `milver-admin.html`.
 
 Los nombres salen de RPCs públicas que devuelven **solo id + nombre** de los
 activos (`milver_comisionistas_pub`, `milver_operarios_pub`); el PIN nunca se
-expone. Los operarios viven en la tabla `milver_operarios` (el PIN de depósito
-sigue siendo el compartido; el nombre es para registrar quién armó). El login
-propio de `milver-deposito.html` también usa el desplegable de operarios.
+expone. Los operarios viven en la tabla `milver_operarios` y **entran sin PIN**:
+la credencial del depósito es el propio nombre, que `milver_dep_ok` valida
+contra el padrón de operarios activos (el PIN de depósito viejo sigue aceptado
+por compatibilidad). El login propio de `milver-deposito.html` también usa el
+desplegable de operarios, sin PIN.
 
 ## Comisionistas y carteras
 
@@ -118,8 +120,8 @@ costo, ganancia y margen **por día** y **por pedido**, con tarjetas de
 ## Depósito (`milver-deposito.html`)
 
 Botonera para los operarios que arman pedidos, calcada del patrón de
-Producción Virgilio. PIN de depósito propio (demo **2468**) + nombre del
-operario. Cola de pedidos entrantes en orden de llegada; al abrir uno, la
+Producción Virgilio. El operario **entra solo eligiendo su nombre** de la lista
+(sin PIN). Cola de pedidos entrantes en orden de llegada; al abrir uno, la
 botonera de 3 pasos con guarda de estado:
 
 | Botón | Acción | Pasa a |
