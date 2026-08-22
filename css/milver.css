@@ -1,0 +1,419 @@
+/* ============================================================
+   MILVER — overrides sobre styles.css (heredado de LK).
+   Todo lo propio de Milver usa prefijo .mv- para no pisar reglas LK.
+   ============================================================ */
+
+/* Logo tipográfico (Milver no tiene isologo todavía) */
+.mv-logo {
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 3px;
+  color: #123c63;
+}
+.mv-logo-big {
+  font-size: 38px;
+  display: block;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.mv-cart-ico {
+  font-size: 20px;
+  margin-right: 6px;
+}
+.mv-user-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #123c63;
+  padding: 6px 10px;
+  background: #eef4fa;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+/* ---------- Login ---------- */
+.mv-login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: linear-gradient(135deg, #123c63 0%, #1d5a8f 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.mv-login-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mv-login-sub {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.mv-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.mv-input,
+.mv-select {
+  border: 1px solid #ccd5df;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  width: 100%;
+  background: #fff;
+}
+.mv-input:focus,
+.mv-select:focus {
+  outline: 2px solid #1d5a8f;
+  border-color: #1d5a8f;
+}
+.mv-login-error {
+  color: #b3261e;
+  background: #fdecea;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.mv-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mv-btn-primary {
+  background: #123c63;
+  color: #fff;
+}
+.mv-btn-primary:hover {
+  background: #1d5a8f;
+}
+.mv-btn-primary:disabled {
+  background: #9db2c5;
+  cursor: not-allowed;
+}
+
+/* ---------- Toolbar catálogo ---------- */
+.mv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px 4px;
+  flex-wrap: wrap;
+}
+.mv-catalog-info {
+  font-size: 13px;
+  color: #666;
+}
+.mv-toolbar .mv-select {
+  width: auto;
+}
+.mv-sentinel {
+  height: 40px;
+}
+
+/* ---------- Cards sin foto ---------- */
+.mv-grid {
+  padding: 18px 24px 60px;
+}
+.mv-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.mv-card .card-desc {
+  min-height: 38px;
+}
+.mv-var-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: #eef4fa;
+  color: #123c63;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 10px;
+  padding: 3px 8px;
+  margin: 4px 0;
+}
+.mv-var-list {
+  margin-top: 8px;
+  border-top: 1px solid #e5eaf0;
+}
+.mv-var-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f3f7;
+  font-size: 13px;
+}
+.mv-var-cod {
+  color: #888;
+  font-size: 12px;
+  min-width: 38px;
+}
+.mv-var-name {
+  flex: 1;
+  font-weight: 600;
+  color: #333;
+}
+.mv-var-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mv-simple-qty {
+  margin-top: 10px;
+}
+.mv-step {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #ccd5df;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  color: #123c63;
+  cursor: pointer;
+  line-height: 1;
+}
+.mv-step:hover {
+  background: #eef4fa;
+}
+.mv-qty-input {
+  width: 52px;
+  text-align: center;
+  border: 1px solid #ccd5df;
+  border-radius: 6px;
+  padding: 5px 4px;
+  font-size: 14px;
+  -moz-appearance: textfield;
+}
+.mv-qty-input::-webkit-outer-spin-button,
+.mv-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ---------- Carrito ---------- */
+.mv-h2 {
+  padding: 18px 24px 0;
+  color: #123c63;
+}
+.mv-cart-cliente {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  padding: 14px 24px;
+  max-width: 900px;
+}
+.mv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mv-field-wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 600px) {
+  .mv-cart-cliente {
+    grid-template-columns: 1fr;
+  }
+}
+.mv-obs {
+  resize: vertical;
+}
+.mv-cart-items {
+  padding: 0 24px;
+  max-width: 900px;
+}
+.mv-cart-empty {
+  color: #666;
+  font-size: 14px;
+  padding: 24px 0;
+}
+.mv-cart-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5eaf0;
+}
+.mv-cart-line-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mv-cart-cod {
+  font-size: 12px;
+  color: #888;
+}
+.mv-cart-desc {
+  font-weight: 700;
+  color: #222;
+  font-size: 14px;
+}
+.mv-cart-meta {
+  font-size: 12px;
+  color: #666;
+}
+.mv-cart-line-sub {
+  font-weight: 800;
+  color: #123c63;
+  min-width: 90px;
+  text-align: right;
+}
+.mv-cart-totals {
+  padding: 14px 24px;
+  max-width: 900px;
+}
+.mv-tot-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #444;
+  padding: 3px 0;
+}
+.mv-tot-desc {
+  color: #1a7f37;
+}
+.mv-tot-total {
+  font-size: 18px;
+  font-weight: 900;
+  color: #123c63;
+  border-top: 2px solid #123c63;
+  margin-top: 6px;
+  padding-top: 8px;
+}
+.mv-tot-warn {
+  margin-top: 10px;
+  background: #fff7e0;
+  border: 1px solid #f0d47a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #7a5b00;
+}
+.mv-btn-submit {
+  margin: 6px 24px 60px;
+}
+
+/* ---------- Confirmación ---------- */
+.mv-confirm-card {
+  max-width: 480px;
+  margin: 60px auto;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e5eaf0;
+  border-radius: 14px;
+  padding: 36px 28px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+.mv-confirm-ico {
+  font-size: 46px;
+}
+.mv-confirm-card .mv-h2 {
+  padding: 8px 0 0;
+}
+.mv-confirm-detalle {
+  color: #444;
+  font-size: 15px;
+  margin: 10px 0 20px;
+}
+.mv-confirm-total {
+  font-size: 18px;
+}
+
+/* ---------- Historial ---------- */
+.mv-historial {
+  padding: 14px 24px 60px;
+  max-width: 900px;
+}
+.mv-hist-card {
+  border: 1px solid #e5eaf0;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.mv-hist-card summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+  flex-wrap: wrap;
+}
+.mv-hist-card summary::-webkit-details-marker {
+  display: none;
+}
+.mv-hist-num {
+  font-weight: 800;
+  color: #123c63;
+}
+.mv-hist-cliente {
+  flex: 1;
+  font-weight: 600;
+}
+.mv-hist-fecha {
+  color: #888;
+  font-size: 13px;
+}
+.mv-hist-total {
+  font-weight: 800;
+}
+.mv-hist-items {
+  border-top: 1px solid #e5eaf0;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mv-hist-item {
+  display: grid;
+  grid-template-columns: 50px 1fr auto auto;
+  gap: 10px;
+  font-size: 13px;
+  color: #444;
+}
+.mv-hist-obs {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .mv-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    padding: 12px;
+    gap: 12px;
+  }
+  .mv-toolbar {
+    padding: 10px 12px 0;
+  }
+  .mv-cart-line {
+    flex-wrap: wrap;
+  }
+  .mv-cart-line-sub {
+    min-width: 0;
+  }
+}

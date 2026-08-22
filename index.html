@@ -1,0 +1,172 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Milver · Carga de Pedidos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Portal de carga de pedidos para comisionistas de Milver."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="css/styles.css?v=1" />
+    <link rel="stylesheet" href="css/milver.css?v=1" />
+  </head>
+
+  <body>
+    <header class="header">
+      <div class="logo">
+        <span class="mv-logo">MILVER</span>
+      </div>
+
+      <div class="header-center" id="headerCenter"></div>
+
+      <nav class="nav">
+        <div class="nav-center">
+          <input
+            id="navSearch"
+            class="nav-search"
+            type="search"
+            placeholder="Buscar por código o descripción…"
+            name="catalog_q"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            inputmode="search"
+            aria-autocomplete="none"
+            data-form-type="other"
+            list=""
+          />
+
+          <div class="dropdown-wrap">
+            <button type="button" id="categoriesBtn" class="nav-link">
+              Categorías ▾
+            </button>
+            <div id="categoriesMenu" class="dropdown-menu"></div>
+          </div>
+
+          <button type="button" class="nav-link" onclick="showSection('productos')">
+            Productos
+          </button>
+
+          <button type="button" class="nav-link" onclick="showSection('historial')">
+            Historial
+          </button>
+
+          <button
+            type="button"
+            id="cartLink"
+            class="nav-link nav-link-cart"
+            onclick="showSection('carrito')"
+          >
+            <span class="mv-cart-ico" aria-hidden="true">🛒</span>
+            <span class="cart-link-text">
+              <span class="cart-link-line1">Enviá tu</span>
+              <span class="cart-link-line2">Pedido (<span id="cartCount">0</span>)</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="nav-right">
+          <span id="userBadge" class="mv-user-badge" style="display:none"></span>
+          <button type="button" id="logoutBtn" class="nav-link" style="display:none" onclick="logout()">
+            Salir
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <!-- LOGIN -->
+    <div id="loginOverlay" class="mv-login-overlay">
+      <div class="mv-login-card">
+        <div class="mv-logo mv-logo-big">MILVER</div>
+        <p class="mv-login-sub">Portal de comisionistas — carga de pedidos</p>
+
+        <label class="mv-label" for="loginNombre">Comisionista</label>
+        <input id="loginNombre" class="mv-input" type="text" placeholder="Nombre y apellido" autocomplete="username" />
+
+        <label class="mv-label" for="loginPin">PIN</label>
+        <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+
+        <div id="loginError" class="mv-login-error" style="display:none"></div>
+
+        <button type="button" id="loginBtn" class="mv-btn mv-btn-primary" onclick="doLogin()">
+          Ingresar
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <!-- PRODUCTOS -->
+      <section id="productos" class="section active">
+        <div class="mv-toolbar">
+          <div id="catalogInfo" class="mv-catalog-info">Cargando catálogo…</div>
+          <select id="sortSelect" class="mv-select" onchange="setSortMode(this.value)">
+            <option value="cod">Ordenar: Código</option>
+            <option value="alfa">Ordenar: A → Z</option>
+            <option value="precio-asc">Precio: menor a mayor</option>
+            <option value="precio-desc">Precio: mayor a menor</option>
+          </select>
+        </div>
+        <div id="productsContainer" class="products-grid mv-grid"></div>
+        <div id="loadMoreSentinel" class="mv-sentinel"></div>
+      </section>
+
+      <!-- CARRITO -->
+      <section id="carrito" class="section">
+        <h2 class="mv-h2">Tu pedido</h2>
+
+        <div class="mv-cart-cliente">
+          <div class="mv-field">
+            <label class="mv-label" for="clienteSelect">Cliente</label>
+            <select id="clienteSelect" class="mv-select" onchange="setCliente(this.value)"></select>
+          </div>
+
+          <div class="mv-field">
+            <label class="mv-label" for="mvPaymentSelect">Medio de pago</label>
+            <select id="mvPaymentSelect" class="mv-select">
+              <option value="Contado">Contado</option>
+              <option value="Cuenta Corriente">Cuenta Corriente</option>
+              <option value="Cheque 30 días">Cheque 30 días</option>
+            </select>
+          </div>
+
+          <div class="mv-field mv-field-wide">
+            <label class="mv-label" for="obsInput">Observaciones</label>
+            <textarea id="obsInput" class="mv-input mv-obs" rows="2" placeholder="Opcional"></textarea>
+          </div>
+        </div>
+
+        <div id="cartItems" class="mv-cart-items"></div>
+
+        <div id="cartTotals" class="mv-cart-totals"></div>
+
+        <button type="button" id="submitBtn" class="mv-btn mv-btn-primary mv-btn-submit" onclick="submitOrder()">
+          Confirmar pedido
+        </button>
+      </section>
+
+      <!-- PEDIDO CONFIRMADO -->
+      <section id="pedidoConfirmado" class="section">
+        <div class="mv-confirm-card">
+          <div class="mv-confirm-ico">✅</div>
+          <h2 class="mv-h2">¡Pedido enviado!</h2>
+          <div id="confirmDetalle" class="mv-confirm-detalle"></div>
+          <button type="button" class="mv-btn mv-btn-primary" onclick="nuevoPedido()">
+            Cargar otro pedido
+          </button>
+        </div>
+      </section>
+
+      <!-- HISTORIAL -->
+      <section id="historial" class="section">
+        <h2 class="mv-h2">Historial de pedidos</h2>
+        <div id="historialLista" class="mv-historial"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js?v=1"></script>
+  </body>
+</html>
