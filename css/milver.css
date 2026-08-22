@@ -989,8 +989,8 @@ body.mv-has-cartbar main {
   border-radius: 12px;
   font-size: 28px !important;
   font-weight: 800;
-  text-align: center;
-  padding: 12px;
+  text-align: right;
+  padding: 12px 16px;
   width: 100%;
   color: #123c63;
   -moz-appearance: textfield;
