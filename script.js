@@ -14,7 +14,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 /***********************
  * ESTADO GLOBAL
  ***********************/
-let WEB_ORDER_DISCOUNT = 0.02;
+let WEB_ORDER_DISCOUNT = 0; // Milver NO aplica descuento por pedido web (a diferencia de LK)
 
 let products = [];        // filas crudas de milver_catalogo (una por ítem/variante)
 let articles = [];        // agrupado: una entrada por artículo (madre con variantes, o simple)
@@ -703,7 +703,6 @@ function renderCart() {
           ? `<div class="mv-tot-row"><span>Dto. cliente (${Math.round(t.dtoVol * 100)}%)</span><span>incluido</span></div>`
           : ""
       }
-      <div class="mv-tot-row"><span>Dto. pedido web (${Math.round(WEB_ORDER_DISCOUNT * 100)}%)</span><span>incluido</span></div>
       <div class="mv-tot-row mv-tot-desc"><span>Descuentos</span><span>−$${formatMoney(t.descuento)}</span></div>
       <div class="mv-tot-row mv-tot-total"><span>TOTAL</span><span>$${formatMoney(t.total)} + IVA</span></div>
       ${!clienteSel ? `<div class="mv-tot-warn">Elegí un cliente para confirmar el pedido.</div>` : ""}
