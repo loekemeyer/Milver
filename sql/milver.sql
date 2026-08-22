@@ -6,6 +6,8 @@
 -- y migrar los datos de milver_orders / milver_order_items).
 -- ============================================================
 
+create extension if not exists pgcrypto with schema extensions;
+
 create table public.milver_products (
   cod         text primary key,
   descripcion text not null,
@@ -87,9 +89,13 @@ alter table public.milver_cliente_surtido enable row level security;
 insert into public.milver_settings values ('web_order_discount', '0.02');
 
 -- Nombres reales de comisionistas todavía no están: genéricos 1..5, PIN nnnn
+-- (hasheado con bcrypt; el PIN en claro es solo el valor inicial de demo)
 insert into public.milver_comisionistas (nombre, pin)
-select 'Comisionista ' || n, repeat(n::text, 4)
+select 'Comisionista ' || n, extensions.crypt(repeat(n::text, 4), extensions.gen_salt('bf'))
 from generate_series(1, 5) n;
+
+-- PIN del panel de administración (demo: 9999)
+insert into public.milver_settings values ('admin_pin_hash', extensions.crypt('9999', extensions.gen_salt('bf')));
 
 -- 500 clientes: C001..C500, en bloques de 100 por comisionista
 -- (Comisionista 1 → C001-C100, 2 → C101-C200, etc.)
@@ -337,5 +343,490 @@ begin
     ) order by o.created_at desc)
     from (select * from milver_orders where comisionista_id = p_comisionista_id
           order by created_at desc limit 50) o
+  ), '[]'::jsonb));
+end $$;
+
+-- ============================================================
+-- v3 — seguridad + ventas + administración
+-- Las definiciones de acá abajo REEMPLAZAN (create or replace) a las
+-- versiones anteriores de milver_login / milver_clientes_list /
+-- milver_surtido / milver_submit_order / milver_historial.
+-- ============================================================
+
+create table public.milver_ventas (
+  id          bigint generated always as identity primary key,
+  cliente_cod text not null references public.milver_clientes(cod) on delete cascade,
+  item_cod    text not null,
+  fecha       date,
+  cajas       numeric not null default 0,
+  importado_at timestamptz not null default now()
+);
+create index milver_ventas_cliente_idx on public.milver_ventas (cliente_cod);
+alter table public.milver_ventas enable row level security;
+
+create table public.milver_login_intentos (
+  id      bigint generated always as identity primary key,
+  usuario text not null,
+  ok      boolean not null,
+  at      timestamptz not null default now()
+);
+create index milver_login_intentos_idx on public.milver_login_intentos (usuario, at);
+alter table public.milver_login_intentos enable row level security;
+
+-- ---------- helpers internos (revocados de anon/authenticated) ----------
+create or replace function public.milver_com_nombre(p_id integer, p_pin text)
+returns text language sql security definer set search_path = public, extensions stable as $$
+  select nombre from milver_comisionistas
+   where id = p_id and activo and pin = crypt(trim(p_pin), pin);
+$$;
+revoke execute on function public.milver_com_nombre(integer, text) from public, anon, authenticated;
+
+create or replace function public.milver_admin_ok(p_pin text)
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
+declare v_hash text; v_fails int; v_ok boolean;
+begin
+  select count(*) into v_fails from milver_login_intentos
+   where usuario = '__admin__' and not ok and at > now() - interval '10 minutes';
+  if v_fails >= 8 then return false; end if;
+  select valor into v_hash from milver_settings where clave = 'admin_pin_hash';
+  v_ok := v_hash is not null and v_hash = crypt(trim(p_pin), v_hash);
+  insert into milver_login_intentos (usuario, ok) values ('__admin__', v_ok);
+  return v_ok;
+end $$;
+revoke execute on function public.milver_admin_ok(text) from public, anon, authenticated;
+
+-- ---------- login con rate limit (8 fallos / 10 min) ----------
+-- OJO: el found del SELECT se captura ANTES del insert del intento,
+-- porque el insert lo pisa (1 fila insertada => found = true).
+create or replace function public.milver_login(p_nombre text, p_pin text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare c record; v_usuario text; v_fails int; v_ok boolean;
+begin
+  v_usuario := lower(trim(p_nombre));
+  select count(*) into v_fails from milver_login_intentos
+   where usuario = v_usuario and not ok and at > now() - interval '10 minutes';
+  if v_fails >= 8 then
+    return jsonb_build_object('ok', false, 'error', 'Demasiados intentos. Esperá 10 minutos.');
+  end if;
+
+  select id, nombre into c from milver_comisionistas
+   where lower(nombre) = v_usuario and activo and pin = crypt(trim(p_pin), pin);
+  v_ok := found;
+  insert into milver_login_intentos (usuario, ok) values (v_usuario, v_ok);
+  if not v_ok then
+    return jsonb_build_object('ok', false, 'error', 'Nombre o PIN incorrecto');
+  end if;
+  return jsonb_build_object('ok', true, 'id', c.id, 'nombre', c.nombre);
+end $$;
+
+-- ---------- RPCs de comisionista (v3: validación por helper) ----------
+create or replace function public.milver_clientes_list(p_comisionista_id integer, p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if milver_com_nombre(p_comisionista_id, p_pin) is null then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true, 'clientes', coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'cod', cod, 'razon_social', razon_social, 'dto_vol', dto_vol, 'localidad', localidad
+           ) order by cod)
+    from milver_clientes where comisionista_id = p_comisionista_id
+  ), '[]'::jsonb));
+end $$;
+
+create or replace function public.milver_surtido(p_comisionista_id integer, p_pin text, p_cliente_cod text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if milver_com_nombre(p_comisionista_id, p_pin) is null or not exists (
+    select 1 from milver_clientes where cod = p_cliente_cod and comisionista_id = p_comisionista_id
+  ) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida o cliente ajeno');
+  end if;
+  return jsonb_build_object('ok', true, 'cods', coalesce((
+    select jsonb_agg(item_cod order by item_cod::int)
+    from milver_cliente_surtido where cliente_cod = p_cliente_cod
+  ), '[]'::jsonb));
+end $$;
+
+create or replace function public.milver_submit_order(
+  p_comisionista_id integer, p_pin text, p_cliente_cod text,
+  p_metodo_pago text, p_observaciones text, p_items jsonb
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_nombre text; v_cli record; v_web numeric; v_order_id bigint;
+  v_sub_lista numeric := 0; v_total numeric := 0;
+  it record;
+begin
+  v_nombre := milver_com_nombre(p_comisionista_id, p_pin);
+  if v_nombre is null then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+
+  select cod, razon_social, dto_vol into v_cli from milver_clientes
+   where cod = p_cliente_cod and comisionista_id = p_comisionista_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Cliente inexistente o de otro comisionista');
+  end if;
+
+  if p_items is null or jsonb_array_length(p_items) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Pedido vacío');
+  end if;
+
+  select coalesce(valor::numeric, 0.02) into v_web
+  from milver_settings where clave = 'web_order_discount';
+  v_web := coalesce(v_web, 0.02);
+
+  insert into milver_orders (comisionista_id, comisionista, cliente_cod, cliente_nombre, metodo_pago, observaciones)
+  values (p_comisionista_id, v_nombre, v_cli.cod, v_cli.razon_social, p_metodo_pago, p_observaciones)
+  returning id into v_order_id;
+
+  for it in
+    select p.cod, p.descripcion, p.variante, p.uxb, p.list_price,
+           greatest(1, least(9999, (x->>'cajas')::int)) as cajas
+    from jsonb_array_elements(p_items) x
+    join milver_products p on p.cod = (x->>'cod') and p.activo
+    where coalesce((x->>'cajas')::int, 0) > 0
+  loop
+    declare
+      v_uni integer := it.uxb * it.cajas;
+      v_neto numeric := round(it.list_price * (1 - v_cli.dto_vol) * (1 - v_web), 2);
+    begin
+      insert into milver_order_items
+        (order_id, item_cod, descripcion, variante, cajas, uxb, unidades, precio_lista, precio_neto, subtotal)
+      values
+        (v_order_id, it.cod, it.descripcion, it.variante, it.cajas, it.uxb, v_uni, it.list_price, v_neto, round(v_neto * v_uni, 2));
+      v_sub_lista := v_sub_lista + it.list_price * v_uni;
+      v_total := v_total + round(v_neto * v_uni, 2);
+    end;
+  end loop;
+
+  if v_total = 0 then
+    delete from milver_orders where id = v_order_id;
+    return jsonb_build_object('ok', false, 'error', 'Ningún ítem válido');
+  end if;
+
+  update milver_orders
+     set subtotal_lista = round(v_sub_lista, 2),
+         descuento_total = round(v_sub_lista - v_total, 2),
+         total = v_total
+   where id = v_order_id;
+
+  return jsonb_build_object('ok', true, 'numero', v_order_id, 'total', v_total,
+                            'cliente', v_cli.razon_social);
+end $$;
+
+create or replace function public.milver_historial(p_comisionista_id integer, p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if milver_com_nombre(p_comisionista_id, p_pin) is null then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true, 'pedidos', coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'numero', o.id, 'fecha', o.created_at, 'cliente', o.cliente_nombre,
+      'metodo_pago', o.metodo_pago, 'total', o.total, 'observaciones', o.observaciones,
+      'items', (select jsonb_agg(jsonb_build_object(
+                  'cod', i.item_cod, 'descripcion', i.descripcion, 'variante', i.variante,
+                  'cajas', i.cajas, 'uxb', i.uxb, 'unidades', i.unidades,
+                  'precio_neto', i.precio_neto, 'subtotal', i.subtotal) order by i.id)
+                from milver_order_items i where i.order_id = o.id)
+    ) order by o.created_at desc)
+    from (select * from milver_orders where comisionista_id = p_comisionista_id
+          order by created_at desc limit 50) o
+  ), '[]'::jsonb));
+end $$;
+
+-- ---------- RPCs de ADMIN (todas validan milver_admin_ok) ----------
+create or replace function public.milver_admin_login(p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'PIN incorrecto o demasiados intentos');
+  end if;
+  return jsonb_build_object('ok', true);
+end $$;
+
+create or replace function public.milver_admin_pedidos(p_pin text, p_desde date default null, p_limit integer default 500)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true, 'pedidos', coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'numero', o.id, 'fecha', o.created_at, 'comisionista', o.comisionista,
+      'cliente_cod', o.cliente_cod, 'cliente', o.cliente_nombre,
+      'metodo_pago', o.metodo_pago, 'observaciones', o.observaciones,
+      'subtotal_lista', o.subtotal_lista, 'descuento_total', o.descuento_total, 'total', o.total,
+      'items', (select jsonb_agg(jsonb_build_object(
+                  'cod', i.item_cod, 'descripcion', i.descripcion, 'variante', i.variante,
+                  'cajas', i.cajas, 'uxb', i.uxb, 'unidades', i.unidades,
+                  'precio_lista', i.precio_lista, 'precio_neto', i.precio_neto, 'subtotal', i.subtotal) order by i.id)
+                from milver_order_items i where i.order_id = o.id)
+    ) order by o.created_at desc)
+    from (select * from milver_orders
+           where p_desde is null or created_at >= p_desde
+           order by created_at desc limit least(coalesce(p_limit, 500), 2000)) o
+  ), '[]'::jsonb));
+end $$;
+
+create or replace function public.milver_admin_stats(p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true,
+    'productos', (select count(*) from milver_products where activo),
+    'productos_inactivos', (select count(*) from milver_products where not activo),
+    'clientes', (select count(*) from milver_clientes),
+    'comisionistas', (select count(*) from milver_comisionistas where activo),
+    'pedidos', (select count(*) from milver_orders),
+    'total_pedidos', (select coalesce(sum(total), 0) from milver_orders),
+    'ventas_filas', (select count(*) from milver_ventas),
+    'surtido_filas', (select count(*) from milver_cliente_surtido),
+    'comisionistas_lista', (select jsonb_agg(jsonb_build_object(
+        'id', c.id, 'nombre', c.nombre, 'activo', c.activo,
+        'clientes', (select count(*) from milver_clientes cl where cl.comisionista_id = c.id)
+      ) order by c.id) from milver_comisionistas c));
+end $$;
+
+create or replace function public.milver_admin_import_products(p_pin text, p_rows jsonb, p_desactivar_faltantes boolean default false)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ins int := 0; v_upd int := 0; v_des int := 0;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if p_rows is null or jsonb_array_length(p_rows) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Archivo vacío');
+  end if;
+
+  with filas as (
+    select trim(x->>'cod') as cod,
+           nullif(trim(x->>'descripcion'), '') as descripcion,
+           coalesce(nullif(trim(x->>'categoria'), ''), 'Sin categoría') as categoria,
+           nullif(trim(x->>'madre_cod'), '') as madre_cod,
+           nullif(trim(x->>'madre_desc'), '') as madre_desc,
+           nullif(trim(x->>'variante'), '') as variante,
+           greatest(1, coalesce((x->>'uxb')::int, 1)) as uxb,
+           greatest(0, coalesce((x->>'list_price')::numeric, 0)) as list_price
+    from jsonb_array_elements(p_rows) x
+    where nullif(trim(x->>'cod'), '') is not null
+      and nullif(trim(x->>'descripcion'), '') is not null
+  ),
+  up as (
+    insert into milver_products (cod, descripcion, categoria, madre_cod, madre_desc, variante, uxb, list_price, activo)
+    select distinct on (cod) cod, descripcion, categoria, madre_cod, madre_desc, variante, uxb, list_price, true
+    from filas
+    on conflict (cod) do update
+      set descripcion = excluded.descripcion, categoria = excluded.categoria,
+          madre_cod = excluded.madre_cod, madre_desc = excluded.madre_desc,
+          variante = excluded.variante, uxb = excluded.uxb,
+          list_price = excluded.list_price, activo = true
+    returning (xmax = 0) as insertado
+  )
+  select count(*) filter (where insertado), count(*) filter (where not insertado)
+    into v_ins, v_upd from up;
+
+  if p_desactivar_faltantes then
+    update milver_products p set activo = false
+     where p.activo
+       and not exists (
+         select 1 from jsonb_array_elements(p_rows) x
+          where trim(x->>'cod') = p.cod
+       );
+    get diagnostics v_des = row_count;
+  end if;
+
+  return jsonb_build_object('ok', true, 'insertados', v_ins, 'actualizados', v_upd, 'desactivados', v_des);
+end $$;
+
+create or replace function public.milver_admin_import_clientes(p_pin text, p_rows jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ins int := 0; v_upd int := 0;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if p_rows is null or jsonb_array_length(p_rows) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Archivo vacío');
+  end if;
+  with filas as (
+    select trim(x->>'cod') as cod,
+           nullif(trim(x->>'razon_social'), '') as razon_social,
+           least(0.9, greatest(0, coalesce((x->>'dto_vol')::numeric, 0))) as dto_vol,
+           nullif(trim(x->>'localidad'), '') as localidad,
+           (x->>'comisionista_id')::int as comisionista_id
+    from jsonb_array_elements(p_rows) x
+    where nullif(trim(x->>'cod'), '') is not null
+      and nullif(trim(x->>'razon_social'), '') is not null
+  ),
+  up as (
+    insert into milver_clientes (cod, razon_social, dto_vol, localidad, comisionista_id)
+    select distinct on (cod) cod, razon_social, dto_vol, localidad,
+           case when comisionista_id in (select id from milver_comisionistas) then comisionista_id end
+    from filas
+    on conflict (cod) do update
+      set razon_social = excluded.razon_social, dto_vol = excluded.dto_vol,
+          localidad = excluded.localidad,
+          comisionista_id = coalesce(excluded.comisionista_id, milver_clientes.comisionista_id)
+    returning (xmax = 0) as insertado
+  )
+  select count(*) filter (where insertado), count(*) filter (where not insertado)
+    into v_ins, v_upd from up;
+  return jsonb_build_object('ok', true, 'insertados', v_ins, 'actualizados', v_upd);
+end $$;
+
+create or replace function public.milver_admin_import_ventas(p_pin text, p_rows jsonb, p_reemplazar boolean default true)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ins int := 0; v_surt int := 0; v_sin_cliente int := 0;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if p_rows is null or jsonb_array_length(p_rows) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Archivo vacío');
+  end if;
+
+  create temp table _mv_filas on commit drop as
+    select trim(x->>'cliente_cod') as cliente_cod,
+           trim(x->>'item_cod') as item_cod,
+           (nullif(trim(x->>'fecha'), ''))::date as fecha,
+           greatest(0, coalesce((x->>'cajas')::numeric, 0)) as cajas
+    from jsonb_array_elements(p_rows) x
+    where nullif(trim(x->>'cliente_cod'), '') is not null
+      and nullif(trim(x->>'item_cod'), '') is not null;
+
+  select count(*) into v_sin_cliente from _mv_filas f
+   where not exists (select 1 from milver_clientes c where c.cod = f.cliente_cod);
+  delete from _mv_filas f
+   where not exists (select 1 from milver_clientes c where c.cod = f.cliente_cod);
+
+  if p_reemplazar then
+    delete from milver_ventas v
+     where v.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  end if;
+
+  insert into milver_ventas (cliente_cod, item_cod, fecha, cajas)
+  select cliente_cod, item_cod, fecha, cajas from _mv_filas;
+  get diagnostics v_ins = row_count;
+
+  -- Surtido real: lo que el cliente compró según sus ventas
+  delete from milver_cliente_surtido s
+   where s.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  insert into milver_cliente_surtido (cliente_cod, item_cod)
+  select distinct v.cliente_cod, v.item_cod
+  from milver_ventas v
+  join milver_products p on p.cod = v.item_cod
+  where v.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  get diagnostics v_surt = row_count;
+
+  return jsonb_build_object('ok', true, 'ventas_insertadas', v_ins,
+                            'surtido_filas', v_surt, 'filas_sin_cliente', v_sin_cliente);
+end $$;
+
+create or replace function public.milver_admin_upsert_comisionista(
+  p_pin text, p_id integer, p_nombre text, p_pin_nuevo text default null, p_activo boolean default true)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare v_id integer;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if nullif(trim(p_nombre), '') is null then
+    return jsonb_build_object('ok', false, 'error', 'Falta el nombre');
+  end if;
+  if p_id is null then
+    if length(coalesce(trim(p_pin_nuevo), '')) < 4 then
+      return jsonb_build_object('ok', false, 'error', 'PIN de al menos 4 caracteres');
+    end if;
+    insert into milver_comisionistas (nombre, pin, activo)
+    values (trim(p_nombre), crypt(trim(p_pin_nuevo), gen_salt('bf')), coalesce(p_activo, true))
+    returning id into v_id;
+  else
+    update milver_comisionistas
+       set nombre = trim(p_nombre),
+           activo = coalesce(p_activo, activo),
+           pin = case when length(coalesce(trim(p_pin_nuevo), '')) >= 4
+                      then crypt(trim(p_pin_nuevo), gen_salt('bf')) else pin end
+     where id = p_id
+     returning id into v_id;
+    if v_id is null then
+      return jsonb_build_object('ok', false, 'error', 'Comisionista inexistente');
+    end if;
+  end if;
+  return jsonb_build_object('ok', true, 'id', v_id);
+exception when unique_violation then
+  return jsonb_build_object('ok', false, 'error', 'Ya existe un comisionista con ese nombre');
+end $$;
+
+create or replace function public.milver_admin_upsert_cliente(
+  p_pin text, p_cod text, p_razon_social text, p_dto_vol numeric default 0,
+  p_localidad text default null, p_comisionista_id integer default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if nullif(trim(p_cod), '') is null or nullif(trim(p_razon_social), '') is null then
+    return jsonb_build_object('ok', false, 'error', 'Faltan código o razón social');
+  end if;
+  insert into milver_clientes (cod, razon_social, dto_vol, localidad, comisionista_id)
+  values (trim(p_cod), trim(p_razon_social), least(0.9, greatest(0, coalesce(p_dto_vol, 0))),
+          nullif(trim(p_localidad), ''), p_comisionista_id)
+  on conflict (cod) do update
+    set razon_social = excluded.razon_social, dto_vol = excluded.dto_vol,
+        localidad = excluded.localidad, comisionista_id = excluded.comisionista_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+create or replace function public.milver_admin_delete_cliente(p_pin text, p_cod text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  delete from milver_clientes where cod = trim(p_cod);
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Cliente inexistente');
+  end if;
+  return jsonb_build_object('ok', true);
+exception when foreign_key_violation then
+  return jsonb_build_object('ok', false, 'error', 'El cliente tiene pedidos; no se puede borrar');
+end $$;
+
+create or replace function public.milver_admin_set_cartera(p_pin text, p_cliente_cods text[], p_comisionista_id integer)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_n int;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if p_comisionista_id is not null and not exists (
+    select 1 from milver_comisionistas where id = p_comisionista_id
+  ) then
+    return jsonb_build_object('ok', false, 'error', 'Comisionista inexistente');
+  end if;
+  update milver_clientes set comisionista_id = p_comisionista_id
+   where cod = any(p_cliente_cods);
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'actualizados', v_n);
+end $$;
+
+create or replace function public.milver_admin_clientes(p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true, 'clientes', coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'cod', c.cod, 'razon_social', c.razon_social, 'dto_vol', c.dto_vol,
+             'localidad', c.localidad, 'comisionista_id', c.comisionista_id,
+             'ventas', (select count(*) from milver_ventas v where v.cliente_cod = c.cod),
+             'surtido', (select count(*) from milver_cliente_surtido s where s.cliente_cod = c.cod)
+           ) order by c.cod)
+    from milver_clientes c
   ), '[]'::jsonb));
 end $$;

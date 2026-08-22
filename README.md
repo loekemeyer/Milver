@@ -50,9 +50,31 @@ proyecto para no pagar otro. Para identificarlo/transferirlo:
 | RPC `milver_surtido` | surtido de un cliente de la cartera |
 | RPC `milver_submit_order` | alta de pedido; precios recalculados server-side |
 | RPC `milver_historial` | últimos 50 pedidos del comisionista |
+| `milver_ventas` | histórico de compras importado; de acá se deriva el surtido real |
+| `milver_login_intentos` | intentos de login (rate limit: 8 fallos / 10 min) |
+| RPCs `milver_admin_*` | panel admin: pedidos, stats, importadores, ABM, carteras |
 
 Las tablas tienen RLS sin policies (sin acceso directo por REST); todo pasa
-por las RPC. `sql/milver.sql` recrea el esquema completo desde cero.
+por las RPC. Los **PINs se guardan hasheados con bcrypt** (pgcrypto) y el
+login tiene **rate limit** (8 fallos en 10 minutos bloquea).
+`sql/milver.sql` recrea el esquema completo desde cero.
+
+## Panel de administración (`milver-admin.html`)
+
+PIN demo: **9999**. Pestañas:
+
+| Pestaña | Qué hace |
+|---|---|
+| Resumen | contadores + clientes por comisionista |
+| Pedidos | lista con detalle, filtro por fecha, **descarga Excel** (hojas Pedidos + Detalle) |
+| Catálogo | **importador Excel** (upsert por cod; opción de desactivar faltantes; planilla modelo) |
+| Clientes | ABM, buscador, importador Excel, **asignación masiva de carteras** |
+| Comisionistas | alta, renombrar, cambiar PIN, activar/desactivar |
+| Ventas | **importador Excel de ventas**; reconstruye el surtido real de cada cliente del archivo |
+
+El importador detecta columnas por NOMBRE de encabezado (flexible: `cod`/`codigo`,
+`precio`/`list_price`, etc.), nunca por posición — lección aprendida del
+importador de listas de súper de LK.
 
 **Para transferir a Milver**: crear su proyecto Supabase, correr
 `sql/milver.sql`, y en `script.js` cambiar `SUPABASE_URL` + `SUPABASE_ANON_KEY`.

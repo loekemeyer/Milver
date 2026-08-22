@@ -1,0 +1,166 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Milver · Administración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="css/milver.css?v=3" />
+    <link rel="stylesheet" href="css/milver-admin.css?v=3" />
+  </head>
+
+  <body class="mva-body">
+    <!-- LOGIN -->
+    <div id="loginOverlay" class="mv-login-overlay">
+      <div class="mv-login-card">
+        <div class="mv-logo mv-logo-big">MILVER</div>
+        <p class="mv-login-sub">Panel de administración</p>
+        <label class="mv-label" for="loginPin">PIN de administrador</label>
+        <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+        <div id="loginError" class="mv-login-error" style="display:none"></div>
+        <button type="button" id="loginBtn" class="mv-btn mv-btn-primary" onclick="doLogin()">Ingresar</button>
+      </div>
+    </div>
+
+    <header class="mva-header">
+      <span class="mv-logo">MILVER</span>
+      <span class="mva-header-title">Administración</span>
+      <nav class="mva-tabs">
+        <button type="button" class="mva-tab active" data-tab="resumen" onclick="showTab('resumen')">Resumen</button>
+        <button type="button" class="mva-tab" data-tab="pedidos" onclick="showTab('pedidos')">Pedidos</button>
+        <button type="button" class="mva-tab" data-tab="catalogo" onclick="showTab('catalogo')">Catálogo</button>
+        <button type="button" class="mva-tab" data-tab="clientes" onclick="showTab('clientes')">Clientes</button>
+        <button type="button" class="mva-tab" data-tab="comisionistas" onclick="showTab('comisionistas')">Comisionistas</button>
+        <button type="button" class="mva-tab" data-tab="ventas" onclick="showTab('ventas')">Ventas</button>
+      </nav>
+      <div class="mva-header-right">
+        <a class="mva-link" href="index.html">← Portal</a>
+        <button type="button" class="mv-btn mva-btn-sec" onclick="logout()">Salir</button>
+      </div>
+    </header>
+
+    <main class="mva-main">
+      <!-- RESUMEN -->
+      <section id="tab-resumen" class="mva-section active">
+        <h2 class="mv-h2">Resumen</h2>
+        <div id="statsCards" class="mva-cards"></div>
+        <div id="statsComs" class="mva-box"></div>
+      </section>
+
+      <!-- PEDIDOS -->
+      <section id="tab-pedidos" class="mva-section">
+        <div class="mva-bar">
+          <h2 class="mv-h2">Pedidos</h2>
+          <div class="mva-bar-right">
+            <label class="mv-label" for="pedidosDesde">Desde</label>
+            <input id="pedidosDesde" class="mv-input mva-fecha" type="date" onchange="loadPedidos()" />
+            <button type="button" class="mv-btn mv-btn-primary" onclick="descargarPedidosExcel()">⬇ Descargar Excel</button>
+          </div>
+        </div>
+        <div id="pedidosLista" class="mva-box"></div>
+      </section>
+
+      <!-- CATÁLOGO -->
+      <section id="tab-catalogo" class="mva-section">
+        <h2 class="mv-h2">Importar catálogo desde Excel</h2>
+        <div class="mva-box">
+          <p class="mva-help">
+            Columnas esperadas (por nombre de encabezado, en cualquier orden):
+            <code>cod</code>, <code>descripcion</code>, <code>categoria</code>,
+            <code>madre_cod</code>, <code>madre_desc</code>, <code>variante</code>,
+            <code>uxb</code>, <code>precio</code>. Solo <code>cod</code> y
+            <code>descripcion</code> son obligatorias. Upsert por código: lo
+            existente se actualiza, lo nuevo se crea.
+          </p>
+          <div class="mva-row">
+            <input id="fileCatalogo" type="file" accept=".xlsx,.xls,.csv" />
+            <label class="mva-check">
+              <input id="chkDesactivar" type="checkbox" />
+              Desactivar artículos que no estén en el archivo
+            </label>
+            <button type="button" class="mv-btn mv-btn-primary" onclick="importarCatalogo()">Importar</button>
+            <button type="button" class="mv-btn mva-btn-sec" onclick="descargarModeloCatalogo()">Planilla modelo</button>
+          </div>
+          <div id="catalogoResultado" class="mva-resultado"></div>
+        </div>
+      </section>
+
+      <!-- CLIENTES -->
+      <section id="tab-clientes" class="mva-section">
+        <div class="mva-bar">
+          <h2 class="mv-h2">Clientes</h2>
+          <div class="mva-bar-right">
+            <input id="clientesBuscar" class="mv-input mva-buscar" type="search" placeholder="Buscar…" oninput="renderClientes()" />
+          </div>
+        </div>
+
+        <div class="mva-box">
+          <div class="mva-row">
+            <strong>Alta / edición rápida:</strong>
+            <input id="cliCod" class="mv-input mva-mini" placeholder="Cod" />
+            <input id="cliNombre" class="mv-input" placeholder="Razón social" />
+            <input id="cliDto" class="mv-input mva-mini" placeholder="Dto (ej 0.05)" />
+            <input id="cliLoc" class="mv-input mva-mini" placeholder="Localidad" />
+            <select id="cliCom" class="mv-select mva-mini"></select>
+            <button type="button" class="mv-btn mv-btn-primary" onclick="guardarCliente()">Guardar</button>
+          </div>
+          <div class="mva-row">
+            <strong>Importar Excel:</strong>
+            <input id="fileClientes" type="file" accept=".xlsx,.xls,.csv" />
+            <button type="button" class="mv-btn mv-btn-primary" onclick="importarClientes()">Importar</button>
+            <span class="mva-help">Columnas: <code>cod</code>, <code>razon_social</code>, <code>dto_vol</code>, <code>localidad</code>, <code>comisionista_id</code></span>
+          </div>
+          <div class="mva-row">
+            <strong>Asignar seleccionados a:</strong>
+            <select id="carteraCom" class="mv-select mva-mini"></select>
+            <button type="button" class="mv-btn mv-btn-primary" onclick="asignarCartera()">Asignar cartera</button>
+            <span id="carteraInfo" class="mva-help"></span>
+          </div>
+          <div id="clientesResultado" class="mva-resultado"></div>
+        </div>
+
+        <div id="clientesLista" class="mva-box"></div>
+      </section>
+
+      <!-- COMISIONISTAS -->
+      <section id="tab-comisionistas" class="mva-section">
+        <h2 class="mv-h2">Comisionistas</h2>
+        <div class="mva-box">
+          <div class="mva-row">
+            <strong>Alta:</strong>
+            <input id="comNombre" class="mv-input" placeholder="Nombre" />
+            <input id="comPin" class="mv-input mva-mini" placeholder="PIN (mín. 4)" />
+            <button type="button" class="mv-btn mv-btn-primary" onclick="altaComisionista()">Crear</button>
+          </div>
+          <div id="comResultado" class="mva-resultado"></div>
+        </div>
+        <div id="comLista" class="mva-box"></div>
+      </section>
+
+      <!-- VENTAS -->
+      <section id="tab-ventas" class="mva-section">
+        <h2 class="mv-h2">Importar ventas históricas</h2>
+        <div class="mva-box">
+          <p class="mva-help">
+            Columnas: <code>cliente_cod</code>, <code>item_cod</code>,
+            <code>fecha</code> (opcional, AAAA-MM-DD), <code>cajas</code>.
+            Al importar, el <strong>surtido</strong> de cada cliente presente en
+            el archivo se reconstruye desde sus ventas reales — reemplaza al
+            surtido demo. Filas de clientes inexistentes se descartan y se
+            informan.
+          </p>
+          <div class="mva-row">
+            <input id="fileVentas" type="file" accept=".xlsx,.xls,.csv" />
+            <button type="button" class="mv-btn mv-btn-primary" onclick="importarVentas()">Importar</button>
+            <button type="button" class="mv-btn mva-btn-sec" onclick="descargarModeloVentas()">Planilla modelo</button>
+          </div>
+          <div id="ventasResultado" class="mva-resultado"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="milver-admin.js?v=3"></script>
+  </body>
+</html>
