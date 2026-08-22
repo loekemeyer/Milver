@@ -26,6 +26,8 @@ let searchTerm = "";
 let categoryFilter = "";
 let sortMode = "cod";
 let lastConfirmedOrder = null;
+let surtidoSet = new Set(); // cods que el cliente elegido le compra a Milver
+let soloSurtido = false;    // filtro "solo lo que compra"
 
 const CATEGORY_ORDER = ["Cocina", "Bazar", "Limpieza", "Organización", "Textil"];
 const PAGE_SIZE = 48;     // cards por tanda de render (scroll infinito)
@@ -116,12 +118,17 @@ async function doLogin() {
     localStorage.setItem("milver_session", JSON.stringify(session));
   } catch (e) {}
   syncLoginUI();
+  loadClientes();
   renderProducts();
 }
 
 function logout() {
   session = null;
   cart = [];
+  clientes = [];
+  clienteSel = null;
+  surtidoSet = new Set();
+  soloSurtido = false;
   try {
     localStorage.removeItem("milver_session");
   } catch (e) {}
@@ -185,29 +192,83 @@ async function loadCatalog() {
   renderProducts();
 }
 
+// Cartera del comisionista logueado (100 clientes propios).
 async function loadClientes() {
-  const { data, error } = await supabaseClient.rpc("milver_clientes_list");
-  if (!error && Array.isArray(data)) {
-    clientes = data;
-    const sel = $("clienteSelect");
-    if (sel) {
-      sel.innerHTML =
-        '<option value="">— Elegí un cliente —</option>' +
-        clientes
-          .map(
-            (c) =>
-              `<option value="${c.cod}">${c.razon_social} (${c.cod})${
-                Number(c.dto_vol) > 0 ? ` · ${Math.round(c.dto_vol * 100)}% dto` : ""
-              }</option>`,
-          )
-          .join("");
+  if (!session) return;
+  const { data, error } = await supabaseClient.rpc("milver_clientes_list", {
+    p_comisionista_id: session.id,
+    p_pin: session.pin,
+  });
+  if (error || !data?.ok) {
+    console.error("milver_clientes_list:", error || data?.error);
+    return;
+  }
+  clientes = data.clientes || [];
+  const opts =
+    '<option value="">— Elegí un cliente —</option>' +
+    clientes
+      .map(
+        (c) =>
+          `<option value="${c.cod}">${c.razon_social} (${c.cod})${
+            Number(c.dto_vol) > 0 ? ` · ${Math.round(c.dto_vol * 100)}% dto` : ""
+          }</option>`,
+      )
+      .join("");
+  for (const id of ["clienteSelect", "clienteSelectTop"]) {
+    const sel = $(id);
+    if (sel) sel.innerHTML = opts;
+  }
+}
+
+// Elegir cliente carga su surtido (qué le compra a Milver) y marca el catálogo.
+async function setCliente(cod) {
+  clienteSel = clientes.find((c) => c.cod === cod) || null;
+  for (const id of ["clienteSelect", "clienteSelectTop"]) {
+    const sel = $(id);
+    if (sel && sel.value !== (cod || "")) sel.value = cod || "";
+  }
+  surtidoSet = new Set();
+  if (!clienteSel) soloSurtido = false;
+  syncSurtidoBar();
+  renderCart();
+  renderProducts();
+  if (clienteSel && session) {
+    const { data, error } = await supabaseClient.rpc("milver_surtido", {
+      p_comisionista_id: session.id,
+      p_pin: session.pin,
+      p_cliente_cod: clienteSel.cod,
+    });
+    if (!error && data?.ok && clienteSel && clienteSel.cod === cod) {
+      surtidoSet = new Set((data.cods || []).map(String));
+      syncSurtidoBar();
+      renderProducts();
+      if ($("carrito")?.classList.contains("active")) renderCart();
     }
   }
 }
 
-function setCliente(cod) {
-  clienteSel = clientes.find((c) => c.cod === cod) || null;
-  renderCart();
+function toggleSoloSurtido() {
+  soloSurtido = !soloSurtido;
+  _renderLimit = PAGE_SIZE;
+  syncSurtidoBar();
+  renderProducts();
+}
+
+function syncSurtidoBar() {
+  const btn = $("soloSurtidoBtn");
+  if (!btn) return;
+  btn.style.display = clienteSel ? "" : "none";
+  btn.classList.toggle("mv-toggle-on", soloSurtido);
+  btn.textContent = soloSurtido
+    ? "★ Viendo solo lo que compra"
+    : "☆ Solo lo que compra " + (clienteSel ? clienteSel.razon_social : "");
+}
+
+// ¿El artículo (madre o simple) tiene algún ítem en el surtido del cliente?
+function articleEnSurtido(a) {
+  if (!surtidoSet.size) return false;
+  if (a.variantes) return a.variantes.some((v) => surtidoSet.has(String(v.cod)));
+  return surtidoSet.has(String(a.key));
 }
 
 /***********************
@@ -258,6 +319,9 @@ function getFilteredArticles() {
       return String(a.key).includes(q);
     });
   }
+  if (soloSurtido && surtidoSet.size) {
+    list = list.filter(articleEnSurtido);
+  }
   const sorted = [...list];
   if (sortMode === "alfa") {
     sorted.sort((a, b) => a.descripcion.localeCompare(b.descripcion, "es"));
@@ -267,6 +331,10 @@ function getFilteredArticles() {
     sorted.sort((a, b) => b.list_price - a.list_price);
   } else {
     sorted.sort((a, b) => a.minCod - b.minCod);
+  }
+  // Con cliente elegido, lo que él compra va primero (estable dentro del orden).
+  if (surtidoSet.size && !soloSurtido) {
+    sorted.sort((a, b) => Number(articleEnSurtido(b)) - Number(articleEnSurtido(a)));
   }
   return sorted;
 }
@@ -281,10 +349,11 @@ function qtyOf(cod) {
 
 function variantRowHtml(v) {
   const qty = qtyOf(v.cod);
+  const compra = surtidoSet.has(String(v.cod));
   return `
-    <div class="mv-var-row" id="var-${v.cod}">
+    <div class="mv-var-row${compra ? " mv-var-surtido" : ""}" id="var-${v.cod}">
       <span class="mv-var-cod">${v.cod}</span>
-      <span class="mv-var-name">${v.variante || v.descripcion}</span>
+      <span class="mv-var-name">${compra ? '<span class="mv-star" title="Este cliente compra esta variante">★</span> ' : ""}${v.variante || v.descripcion}</span>
       <span class="mv-var-qty">
         <button type="button" class="mv-step" onclick="changeQty('${v.cod}', -1)" aria-label="Restar 1 caja">−</button>
         <input class="mv-qty-input" id="qty-${v.cod}" type="number" min="0" value="${qty}"
@@ -296,6 +365,10 @@ function variantRowHtml(v) {
 }
 
 function buildCard(a) {
+  const compra = articleEnSurtido(a);
+  const surtidoBadge = compra
+    ? '<div class="mv-badge-surtido" title="Este cliente le compra este artículo a Milver">★ Te compra</div>'
+    : "";
   const priceHtml = `
     <div class="card-prices">
       <div class="card-price-line">
@@ -305,7 +378,8 @@ function buildCard(a) {
   `;
   if (a.variantes) {
     return `
-      <div class="product-card mv-card mv-card-madre">
+      <div class="product-card mv-card mv-card-madre${compra ? " mv-card-surtido" : ""}">
+        ${surtidoBadge}
         <div class="card-top">
           <div class="card-row">
             <div class="card-cod">Cods: <span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span></div>
@@ -324,7 +398,8 @@ function buildCard(a) {
   const p = a.item;
   const qty = qtyOf(p.cod);
   return `
-    <div class="product-card mv-card">
+    <div class="product-card mv-card${compra ? " mv-card-surtido" : ""}">
+      ${surtidoBadge}
       <div class="card-top">
         <div class="card-row">
           <div class="card-cod">Cod: <span>${p.cod}</span></div>
@@ -597,7 +672,7 @@ async function loadHistorial() {
 document.addEventListener("DOMContentLoaded", () => {
   restoreSession();
   loadCatalog();
-  loadClientes();
+  if (session) loadClientes();
   setupInfiniteScroll();
 
   const search = $("navSearch");
@@ -643,5 +718,6 @@ window.setSortMode = setSortMode;
 window.changeQty = changeQty;
 window.setQty = setQty;
 window.setCliente = setCliente;
+window.toggleSoloSurtido = toggleSoloSurtido;
 window.submitOrder = submitOrder;
 window.nuevoPedido = nuevoPedido;

@@ -27,10 +27,11 @@ create table public.milver_comisionistas (
 );
 
 create table public.milver_clientes (
-  cod          text primary key,
-  razon_social text not null,
-  dto_vol      numeric not null default 0,
-  localidad    text
+  cod             text primary key,
+  razon_social    text not null,
+  dto_vol         numeric not null default 0,
+  localidad       text,
+  comisionista_id integer references public.milver_comisionistas(id)
 );
 
 create table public.milver_settings (
@@ -50,6 +51,13 @@ create table public.milver_orders (
   descuento_total numeric not null default 0,
   total           numeric not null default 0,
   created_at      timestamptz not null default now()
+);
+
+-- Surtido: qué ítems le compra cada cliente a Milver (para marcarlos en pantalla)
+create table public.milver_cliente_surtido (
+  cliente_cod text not null references public.milver_clientes(cod) on delete cascade,
+  item_cod    text not null references public.milver_products(cod),
+  primary key (cliente_cod, item_cod)
 );
 
 create table public.milver_order_items (
@@ -73,25 +81,34 @@ alter table public.milver_clientes       enable row level security;
 alter table public.milver_settings       enable row level security;
 alter table public.milver_orders         enable row level security;
 alter table public.milver_order_items    enable row level security;
+alter table public.milver_cliente_surtido enable row level security;
 
 -- ---------- DATOS ----------
 insert into public.milver_settings values ('web_order_discount', '0.02');
 
-insert into public.milver_comisionistas (nombre, pin) values
-  ('Juan Ríos', '1111'),
-  ('María Vega', '2222'),
-  ('Pedro Salas', '3333'),
-  ('Lucía Ferrer', '4444'),
-  ('Demo Milver', '1234');
+-- Nombres reales de comisionistas todavía no están: genéricos 1..5, PIN nnnn
+insert into public.milver_comisionistas (nombre, pin)
+select 'Comisionista ' || n, repeat(n::text, 4)
+from generate_series(1, 5) n;
 
-insert into public.milver_clientes (cod, razon_social, dto_vol, localidad)
-select 'C' || lpad(n::text, 2, '0'),
-       (array['Bazar','Regalería','Ferretería','Supermercado','Distribuidora','Almacén','Tienda','Comercial','Mayorista','Casa'])[1 + (n % 10)]
+-- 500 clientes: C001..C500, en bloques de 100 por comisionista
+-- (Comisionista 1 → C001-C100, 2 → C101-C200, etc.)
+insert into public.milver_clientes (cod, razon_social, dto_vol, localidad, comisionista_id)
+select 'C' || lpad(n::text, 3, '0'),
+       (array['Bazar','Regalería','Ferretería','Supermercado','Distribuidora','Almacén','Tienda','Comercial','Mayorista','Casa'])[1 + ((n - 1) % 10)]
          || ' ' ||
-       (array['García','López','Martínez','Fernández','Rodríguez','Sosa','Romero','Díaz','Torres','Acosta','Benítez','Medina','Herrera','Aguirre','Molina'])[1 + ((n * 7) % 15)],
-       (array[0, 0.05, 0.10, 0.15])[1 + (n % 4)],
-       (array['CABA','Rosario','Córdoba','Mendoza','La Plata','Mar del Plata','Tucumán','Salta','Neuquén','Bahía Blanca'])[1 + ((n * 3) % 10)]
-from generate_series(1, 30) n;
+       (array['García','López','Martínez','Fernández','Rodríguez','Sosa','Romero','Díaz','Torres','Acosta','Benítez','Medina','Herrera','Aguirre','Molina','Castro','Ríos','Vega','Silva','Ortiz','Núñez','Vargas','Cabrera','Ponce','Luna'])[1 + (((n - 1) / 10) % 25)]
+         || (array['',' Hnos.'])[1 + ((n - 1) / 250)],
+       (array[0, 0.05, 0.10, 0.15])[1 + ((n - 1) % 4)],
+       (array['CABA','Rosario','Córdoba','Mendoza','La Plata','Mar del Plata','Tucumán','Salta','Neuquén','Bahía Blanca','Santa Fe','Paraná','Posadas','San Juan','Resistencia'])[1 + ((n * 3) % 15)],
+       1 + ((n - 1) / 100)
+from generate_series(1, 500) n;
+
+-- Surtido determinístico: ~40 ítems por cliente
+insert into public.milver_cliente_surtido (cliente_cod, item_cod)
+select distinct 'C' || lpad(n::text, 3, '0'),
+       (1 + ((n * 7919 + i * 104729) % 5000))::text
+from generate_series(1, 500) n, generate_series(1, 40) i;
 
 -- Generación determinística de los 5.000 artículos.
 -- 250 artículos madre con 4 variantes c/u (cods 1-1000) + 4.000 simples (1001-5000).
@@ -191,13 +208,41 @@ returns jsonb language sql security definer set search_path = public stable as $
   from milver_products where activo;
 $$;
 
-create or replace function public.milver_clientes_list()
-returns jsonb language sql security definer set search_path = public stable as $$
-  select coalesce(jsonb_agg(jsonb_build_object(
-           'cod', cod, 'razon_social', razon_social, 'dto_vol', dto_vol, 'localidad', localidad
-         ) order by razon_social), '[]'::jsonb)
-  from milver_clientes;
-$$;
+-- Cartera del comisionista (exige PIN: los 500 clientes no son públicos)
+create or replace function public.milver_clientes_list(p_comisionista_id integer, p_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ok boolean;
+begin
+  select true into v_ok from milver_comisionistas
+   where id = p_comisionista_id and pin = trim(p_pin) and activo;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  return jsonb_build_object('ok', true, 'clientes', coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'cod', cod, 'razon_social', razon_social, 'dto_vol', dto_vol, 'localidad', localidad
+           ) order by cod)
+    from milver_clientes where comisionista_id = p_comisionista_id
+  ), '[]'::jsonb));
+end $$;
+
+-- Surtido del cliente: cods de los ítems que le compra a Milver.
+-- Solo para clientes de la cartera del comisionista logueado.
+create or replace function public.milver_surtido(p_comisionista_id integer, p_pin text, p_cliente_cod text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ok boolean;
+begin
+  select true into v_ok from milver_comisionistas c
+   join milver_clientes cl on cl.comisionista_id = c.id and cl.cod = p_cliente_cod
+   where c.id = p_comisionista_id and c.pin = trim(p_pin) and c.activo;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida o cliente ajeno');
+  end if;
+  return jsonb_build_object('ok', true, 'cods', coalesce((
+    select jsonb_agg(item_cod order by item_cod::int)
+    from milver_cliente_surtido where cliente_cod = p_cliente_cod
+  ), '[]'::jsonb));
+end $$;
 
 -- Alta de pedido. Precios se recalculan SERVER-SIDE desde milver_products:
 -- neto = list_price * (1 - dto_vol del cliente) * (1 - web_order_discount).
@@ -216,9 +261,10 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
   end if;
 
-  select cod, razon_social, dto_vol into v_cli from milver_clientes where cod = p_cliente_cod;
+  select cod, razon_social, dto_vol into v_cli from milver_clientes
+   where cod = p_cliente_cod and comisionista_id = v_com.id;
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'Cliente inexistente');
+    return jsonb_build_object('ok', false, 'error', 'Cliente inexistente o de otro comisionista');
   end if;
 
   if p_items is null or jsonb_array_length(p_items) = 0 then

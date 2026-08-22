@@ -9,8 +9,8 @@
       content="Portal de carga de pedidos para comisionistas de Milver."
     />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/styles.css?v=1" />
-    <link rel="stylesheet" href="css/milver.css?v=1" />
+    <link rel="stylesheet" href="css/styles.css?v=2" />
+    <link rel="stylesheet" href="css/milver.css?v=2" />
   </head>
 
   <body>
@@ -102,12 +102,18 @@
       <section id="productos" class="section active">
         <div class="mv-toolbar">
           <div id="catalogInfo" class="mv-catalog-info">Cargando catálogo…</div>
-          <select id="sortSelect" class="mv-select" onchange="setSortMode(this.value)">
-            <option value="cod">Ordenar: Código</option>
-            <option value="alfa">Ordenar: A → Z</option>
-            <option value="precio-asc">Precio: menor a mayor</option>
-            <option value="precio-desc">Precio: mayor a menor</option>
-          </select>
+          <div class="mv-toolbar-right">
+            <select id="clienteSelectTop" class="mv-select" onchange="setCliente(this.value)" title="Cliente para el que estás cargando el pedido">
+              <option value="">— Elegí un cliente —</option>
+            </select>
+            <button type="button" id="soloSurtidoBtn" class="mv-toggle" style="display:none" onclick="toggleSoloSurtido()"></button>
+            <select id="sortSelect" class="mv-select" onchange="setSortMode(this.value)">
+              <option value="cod">Ordenar: Código</option>
+              <option value="alfa">Ordenar: A → Z</option>
+              <option value="precio-asc">Precio: menor a mayor</option>
+              <option value="precio-desc">Precio: mayor a menor</option>
+            </select>
+          </div>
         </div>
         <div id="productsContainer" class="products-grid mv-grid"></div>
         <div id="loadMoreSentinel" class="mv-sentinel"></div>
@@ -167,6 +173,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=1"></script>
+    <script src="script.js?v=2"></script>
   </body>
 </html>

@@ -417,3 +417,58 @@
     min-width: 0;
   }
 }
+
+/* ---------- Surtido del cliente (v2) ---------- */
+.mv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mv-toggle {
+  border: 1px solid #ccd5df;
+  border-radius: 16px;
+  background: #fff;
+  color: #123c63;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mv-toggle:hover {
+  background: #eef4fa;
+}
+.mv-toggle.mv-toggle-on {
+  background: #123c63;
+  color: #fff;
+  border-color: #123c63;
+}
+.mv-card-surtido {
+  border: 2px solid #1a7f37;
+  position: relative;
+}
+.mv-badge-surtido {
+  align-self: center;
+  background: #1a7f37;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  border-radius: 10px;
+  padding: 3px 10px;
+  margin-bottom: 8px;
+}
+.mv-var-surtido {
+  background: #edf7ef;
+  border-radius: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.mv-star {
+  color: #1a7f37;
+  font-weight: 900;
+}
