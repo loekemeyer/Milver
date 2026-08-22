@@ -979,3 +979,34 @@ begin
   return jsonb_build_object('ok', true, 'ventas_insertadas', v_ins,
                             'surtido_filas', v_surt, 'filas_sin_cliente', v_sin_cliente);
 end $$;
+
+-- ============================================================
+-- v6 — costos + ganancias (acceso maestro) + botonera de depósito
+-- ============================================================
+
+alter table public.milver_products add column cost numeric not null default 0;
+update public.milver_products set cost = round(list_price * 0.5, 2) where cost = 0;
+
+alter table public.milver_order_items add column costo_unit numeric not null default 0;
+
+alter table public.milver_orders
+  add column estado text not null default 'nuevo',   -- nuevo → en_armado → armado → despachado
+  add column estado_at timestamptz,
+  add column armado_por text;
+
+create table public.milver_order_eventos (
+  id       bigint generated always as identity primary key,
+  order_id bigint not null references public.milver_orders(id) on delete cascade,
+  evento   text not null,          -- EA / TA / DES
+  operario text not null,
+  at       timestamptz not null default now()
+);
+alter table public.milver_order_eventos enable row level security;
+
+insert into public.milver_settings values ('deposito_pin_hash', extensions.crypt('2468', extensions.gen_salt('bf')));
+
+-- Las definiciones de milver_submit_order, milver_admin_import_products,
+-- milver_admin_ganancias, milver_dep_ok, milver_dep_login,
+-- milver_dep_pedidos y milver_dep_evento están desplegadas en la base.
+-- Para regenerar el archivo entero: volcar con pg_get_functiondef todas
+-- las funciones milver_* (la base es la fuente de verdad, igual que en LK).

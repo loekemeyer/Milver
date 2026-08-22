@@ -398,44 +398,31 @@ function qtyOf(cod) {
 }
 
 function variantRowHtml(v) {
-  const qty = qtyOf(v.cod);
   const compra = surtidoSet.has(String(v.cod));
+  const qty = qtyOf(v.cod);
   return `
-    <div class="mv-var-row${compra ? " mv-var-surtido" : ""}" id="var-${v.cod}">
-      <span class="mv-var-cod">${v.cod}</span>
-      <span class="mv-var-name">${compra ? '<span class="mv-star" title="Este cliente compra esta variante">★</span> ' : ""}${v.variante || v.descripcion}</span>
-      <span class="mv-var-qty">
-        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', -1)" aria-label="Restar 1 unidad">−</button>
-        <input class="mv-qty-input" id="qty-${v.cod}" type="number" min="0" value="${qty}"
-               onchange="setQty('${v.cod}', this.value)" aria-label="Unidades" />
-        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
-      </span>
+    <div class="mv-var-row mv-tap${compra ? " mv-var-surtido" : ""}${qty > 0 ? " mv-var-conqty" : ""}"
+         id="var-${v.cod}" onclick="tapAdd('${v.cod}')" role="button" tabindex="0">
+      <span class="mv-var-name">${compra ? '<span class="mv-star">★</span> ' : ""}${v.variante || v.descripcion}</span>
+      <span class="mv-var-bigqty" id="bigqty-${v.cod}">${qty}</span>
+      <button type="button" class="mv-qty-edit" onclick="event.stopPropagation();abrirQtyPicker('${v.cod}')" aria-label="Editar cantidad">✎</button>
     </div>
   `;
 }
 
 function buildCard(a) {
   const compra = articleEnSurtido(a);
-  const chips =
-    (compra ? '<span class="mv-tag mv-tag-surtido" title="Este cliente le compra este artículo a Milver">★ Te compra</span>' : "") +
-    (a.compraLk ? '<span class="mv-tag mv-tag-lk" title="Artículo que Milver le compra a Loekemeyer">LOEKE</span>' : "") +
-    (a.variantes ? `<span class="mv-tag">${a.variantes.length} variantes</span>` : "");
-  const head = (codLabel) => `
-    <div class="mv-card-head">
-      <div class="mv-card-title">
-        <div class="card-desc">${a.descripcion}</div>
-        <div class="mv-card-meta card-cod">${codLabel}${chips}</div>
-      </div>
-      <div class="mv-card-price card-prices">
-        <strong>$${formatMoney(a.list_price)}</strong>
-        <span class="mv-card-price-sub">x unidad + IVA</span>
-      </div>
-    </div>
-  `;
+  const tags =
+    (compra ? '<span class="mv-tag mv-tag-surtido">★ Te compra</span>' : "") +
+    (a.compraLk ? '<span class="mv-tag mv-tag-lk">LOEKE</span>' : "");
   if (a.variantes) {
     return `
       <div class="product-card mv-card mv-card-madre${compra ? " mv-card-surtido" : ""}">
-        ${head(`<span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span>`)}
+        <div class="mv-card-head2">
+          <div class="mv-card-title2">${a.descripcion}</div>
+          <div class="mv-card-price2">$${formatMoney(a.list_price)} <span>x u.</span></div>
+        </div>
+        <div class="mv-card-meta2">${tags}<span class="mv-tag mv-tag-plain">${a.variantes.length} variantes</span></div>
         <div class="mv-var-list">
           ${a.variantes.map(variantRowHtml).join("")}
         </div>
@@ -444,14 +431,19 @@ function buildCard(a) {
   }
   const p = a.item;
   const qty = qtyOf(p.cod);
+  // Tap en cualquier parte del cuadrado suma +1. La cantidad se muestra grande.
   return `
-    <div class="product-card mv-card mv-card-simple${compra ? " mv-card-surtido" : ""}">
-      ${head(`<span>${p.cod}</span>`)}
-      <div class="mv-simple-qty mv-var-qty">
-        <button type="button" class="mv-step" onclick="changeQty('${p.cod}', -1)" aria-label="Restar 1 unidad">−</button>
-        <input class="mv-qty-input" id="qty-${p.cod}" type="number" min="0" value="${qty}"
-               onchange="setQty('${p.cod}', this.value)" aria-label="Unidades" />
-        <button type="button" class="mv-step" onclick="changeQty('${p.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
+    <div class="product-card mv-card mv-card-simple mv-tap${qty > 0 ? " mv-card-conqty" : ""}"
+         id="card-${p.cod}" onclick="tapAdd('${p.cod}')" role="button" tabindex="0">
+      <div class="mv-card-head2">
+        <div class="mv-card-title2">${p.descripcion}</div>
+        <div class="mv-card-price2">$${formatMoney(p.list_price)} <span>x u.</span></div>
+      </div>
+      <div class="mv-card-meta2"><span class="mv-tag mv-tag-plain">Cod ${p.cod}</span>${tags}</div>
+      <div class="mv-card-qtyrow">
+        <span class="mv-bigqty" id="bigqty-${p.cod}">${qty}</span>
+        <span class="mv-bigqty-lbl">unidades</span>
+        <button type="button" class="mv-qty-edit" onclick="event.stopPropagation();abrirQtyPicker('${p.cod}')" aria-label="Editar cantidad">✎</button>
       </div>
     </div>
   `;
@@ -527,8 +519,12 @@ function setQty(cod, value) {
       qty: qty,
     });
   }
-  const input = $("qty-" + cod);
-  if (input) input.value = qty;
+  const big = $("bigqty-" + cod);
+  if (big) big.textContent = qty;
+  const card = $("card-" + cod);
+  if (card) card.classList.toggle("mv-card-conqty", qty > 0);
+  const varRow = $("var-" + cod);
+  if (varRow) varRow.classList.toggle("mv-var-conqty", qty > 0);
   updateCartCount();
   if ($("carrito")?.classList.contains("active")) renderCart();
 }
@@ -536,6 +532,73 @@ function setQty(cod, value) {
 function changeQty(cod, delta) {
   if (!session) return;
   setQty(cod, qtyOf(cod) + delta);
+}
+
+// Tap en la card/fila: suma 1 unidad.
+function tapAdd(cod) {
+  if (!session) return;
+  setQty(cod, qtyOf(cod) + 1);
+  const big = $("bigqty-" + cod);
+  if (big) {
+    big.classList.remove("mv-bump");
+    void big.offsetWidth;
+    big.classList.add("mv-bump");
+  }
+}
+
+/***********************
+ * SELECTOR DE CANTIDAD (modal al tocar el artículo/variante)
+ ***********************/
+let _qtyPickerCod = null;
+
+function abrirQtyPicker(cod) {
+  if (!session) return;
+  const p = findProduct(cod);
+  if (!p) return;
+  _qtyPickerCod = String(cod);
+  const modal = $("qtyModal");
+  const tit = $("qtyModalTitulo");
+  const precio = $("qtyModalPrecio");
+  const inp = $("qtyModalInput");
+  if (tit) tit.textContent = p.descripcion;
+  if (precio) {
+    const dtoVol = getDtoVol();
+    const neto = Number(p.list_price) * (1 - dtoVol) * (1 - WEB_ORDER_DISCOUNT);
+    precio.textContent = `Cod ${p.cod} · $${formatMoney(neto)} x unidad + IVA`;
+  }
+  const actual = qtyOf(cod);
+  if (inp) inp.value = actual > 0 ? actual : "";
+  if (modal) modal.style.display = "";
+  if (inp) {
+    inp.focus();
+    inp.select();
+  }
+}
+
+function cerrarQtyPicker() {
+  const modal = $("qtyModal");
+  if (modal) modal.style.display = "none";
+  _qtyPickerCod = null;
+}
+
+function qtySumar(n) {
+  const inp = $("qtyModalInput");
+  if (!inp) return;
+  inp.value = Math.max(0, (parseInt(inp.value, 10) || 0) + n);
+}
+
+function qtyConfirmar() {
+  if (!_qtyPickerCod) return;
+  const inp = $("qtyModalInput");
+  const qty = Math.max(0, parseInt(inp?.value, 10) || 0);
+  setQty(_qtyPickerCod, qty);
+  cerrarQtyPicker();
+}
+
+function qtyQuitar() {
+  if (!_qtyPickerCod) return;
+  setQty(_qtyPickerCod, 0);
+  cerrarQtyPicker();
 }
 
 function updateCartCount() {
@@ -611,12 +674,7 @@ function renderCart() {
             <span class="mv-cart-desc">${i.descripcion}</span>
             <span class="mv-cart-meta">${formatMoney(i.qty)} u. × $${formatMoney(neto)}/u</span>
           </div>
-          <div class="mv-var-qty">
-            <button type="button" class="mv-step" onclick="changeQty('${i.cod}', -1)" aria-label="Restar">−</button>
-            <input class="mv-qty-input" id="qty-${i.cod}" type="number" min="0" value="${i.qty}"
-                   onchange="setQty('${i.cod}', this.value)" aria-label="Unidades" />
-            <button type="button" class="mv-step" onclick="changeQty('${i.cod}', 1)" aria-label="Sumar">+</button>
-          </div>
+          <button type="button" class="mv-qty-pill mv-qty-pill-on" onclick="abrirQtyPicker('${i.cod}')">${formatMoney(i.qty)} u. ✎</button>
           <div class="mv-cart-line-sub">$${formatMoney(neto * i.qty)}</div>
         </div>
       `;
@@ -804,6 +862,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "Enter") doLogin();
     });
   }
+  const qtyInp = $("qtyModalInput");
+  if (qtyInp) {
+    qtyInp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") qtyConfirmar();
+      if (e.key === "Escape") cerrarQtyPicker();
+    });
+  }
 });
 
 /***********************
@@ -817,6 +882,12 @@ window.clearSearch = clearSearch;
 window.repetirUltimoPedido = repetirUltimoPedido;
 window.setSortMode = setSortMode;
 window.changeQty = changeQty;
+window.tapAdd = tapAdd;
+window.abrirQtyPicker = abrirQtyPicker;
+window.cerrarQtyPicker = cerrarQtyPicker;
+window.qtySumar = qtySumar;
+window.qtyConfirmar = qtyConfirmar;
+window.qtyQuitar = qtyQuitar;
 window.setQty = setQty;
 window.setCliente = setCliente;
 window.toggleSoloSurtido = toggleSoloSurtido;

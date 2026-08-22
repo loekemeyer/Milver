@@ -55,7 +55,8 @@ proyecto para no pagar otro. Para identificarlo/transferirlo:
 | `milver_comisionistas` | usuarios con PIN |
 | `milver_clientes` | 500 clientes demo, 100 por comisionista (`comisionista_id`) |
 | `milver_cliente_surtido` | ítems que cada cliente le compra (~40 c/u) |
-| `milver_orders` / `milver_order_items` | pedidos |
+| `milver_orders` / `milver_order_items` | pedidos (con `estado` y `costo_unit`) |
+| `milver_order_eventos` | eventos de armado por operario |
 | `milver_settings` | `web_order_discount` (0.02) |
 | RPC `milver_login` | login nombre + PIN |
 | RPC `milver_catalogo` | catálogo entero en un jsonb (evita tope 1000 filas) |
@@ -65,12 +66,42 @@ proyecto para no pagar otro. Para identificarlo/transferirlo:
 | RPC `milver_historial` | últimos 50 pedidos del comisionista |
 | `milver_ventas` | histórico de compras importado; de acá se deriva el surtido real |
 | `milver_login_intentos` | intentos de login (rate limit: 8 fallos / 10 min) |
-| RPCs `milver_admin_*` | panel admin: pedidos, stats, importadores, ABM, carteras |
+| RPCs `milver_admin_*` | panel admin: pedidos, stats, ganancias, importadores, ABM, carteras |
+| RPCs `milver_dep_*` | depósito: login, cola de pedidos, eventos de armado |
 
 Las tablas tienen RLS sin policies (sin acceso directo por REST); todo pasa
 por las RPC. Los **PINs se guardan hasheados con bcrypt** (pgcrypto) y el
 login tiene **rate limit** (8 fallos en 10 minutos bloquea).
 `sql/milver.sql` recrea el esquema completo desde cero.
+
+## Costos y ganancias (acceso maestro)
+
+`milver_products.cost` = costo por unidad (demo: **mitad del precio de
+venta**; el importador de catálogo acepta una columna `costo` real, y si
+falta asume el 50%). Cada línea de pedido snapshotea `costo_unit`, así el
+histórico no se mueve si cambia el costo después.
+
+El **panel admin** (PIN maestro) tiene la pestaña **Ganancias**: venta,
+costo, ganancia y margen **por día** y **por pedido**, con tarjetas de
+"hoy" y del período elegido.
+
+## Depósito (`milver-deposito.html`)
+
+Botonera para los operarios que arman pedidos, calcada del patrón de
+Producción Virgilio. PIN de depósito propio (demo **2468**) + nombre del
+operario. Cola de pedidos entrantes en orden de llegada; al abrir uno, la
+botonera de 3 pasos con guarda de estado:
+
+| Botón | Acción | Pasa a |
+|---|---|---|
+| EA (azul) | Empezar armado | en_armado |
+| TA (verde) | Armado listo | armado |
+| DES (gris) | Despachado | despachado |
+
+Cada evento queda registrado en `milver_order_eventos` con el operario y
+la hora; el pedido lleva `estado`/`estado_at`/`armado_por`. Los pedidos
+que entran por el portal aparecen solos en la cola (`estado='nuevo'`), así
+se van **programando** a medida que llegan.
 
 ## Panel de administración (`milver-admin.html`)
 

@@ -911,3 +911,268 @@ body.mv-has-cartbar main {
   flex: 1 1 auto;
   width: auto;
 }
+
+/* ============================================================
+   v1.7 — selector de cantidad por toque (reemplaza +/−)
+   ============================================================ */
+.mv-tocable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(18, 60, 99, 0.08);
+}
+.mv-qty-pill {
+  border: 1.5px solid #ccd5df;
+  background: #fff;
+  color: #123c63;
+  border-radius: 14px;
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  touch-action: manipulation;
+  min-width: 44px;
+  text-align: center;
+  cursor: pointer;
+}
+.mv-qty-pill-on {
+  background: #123c63;
+  color: #fff;
+  border-color: #123c63;
+}
+.mv-var-row.mv-tocable {
+  padding: 9px 4px;
+}
+.mv-qtymodal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(10, 25, 40, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.mv-qtymodal-card {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: mvSube 0.18s ease;
+}
+@media (min-width: 700px) {
+  .mv-qtymodal {
+    align-items: center;
+  }
+  .mv-qtymodal-card {
+    border-radius: 18px;
+  }
+}
+@keyframes mvSube {
+  from { transform: translateY(30px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.mv-qtymodal-titulo {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1c2733;
+}
+.mv-qtymodal-precio {
+  font-size: 13px;
+  color: #666;
+}
+.mv-qtymodal-input {
+  border: 2px solid #123c63;
+  border-radius: 12px;
+  font-size: 28px !important;
+  font-weight: 800;
+  text-align: center;
+  padding: 12px;
+  width: 100%;
+  color: #123c63;
+  -moz-appearance: textfield;
+}
+.mv-qtymodal-input::-webkit-outer-spin-button,
+.mv-qtymodal-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+.mv-qtymodal-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.mv-qtymodal-quick button {
+  border: 1.5px solid #ccd5df;
+  background: #f6f9fc;
+  color: #123c63;
+  border-radius: 10px;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mv-qtymodal-quick button:active {
+  transform: scale(0.96);
+}
+.mv-qtymodal-acciones {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px;
+}
+.mv-qtymodal-quitar {
+  background: #fdecea;
+  color: #b3261e;
+}
+
+/* ============================================================
+   v1.7 — logo real, cards 2 col con tap-to-add y cantidad grande
+   ============================================================ */
+.mv-logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
+  border-radius: 4px;
+  background: #fff;
+  padding: 2px 4px;
+}
+.mv-logo-img-big {
+  max-width: 220px;
+  width: 80%;
+  height: auto;
+  display: block;
+  margin: 0 auto 6px;
+}
+
+/* Grilla: 2 por fila en celular, más en pantallas grandes */
+.mv-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px;
+  padding: 12px;
+  align-items: stretch;
+}
+@media (min-width: 700px) {
+  .mv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (min-width: 1000px) {
+  .mv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; padding: 18px 24px 80px; }
+}
+
+/* Card tap: todo el cuadrado suma +1 */
+.mv-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px;
+  padding: 12px !important;
+  border: 2px solid #e5eaf0;
+  border-radius: 14px;
+  min-height: 0 !important;
+  text-align: left;
+}
+.mv-card.mv-card-conqty {
+  border-color: #123c63;
+  background: #f5f9fd;
+}
+.mv-card.mv-var-conqty { border-color: #123c63; }
+.mv-card > :last-child { margin-top: 0 !important; }
+
+.mv-card-head2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mv-card-title2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1c2733;
+  line-height: 1.2;
+}
+.mv-card-price2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #123c63;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mv-card-price2 span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a97a5;
+}
+.mv-card-meta2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.mv-tag-plain {
+  background: #eef1f5;
+  color: #556;
+}
+
+/* Fila de cantidad grande */
+.mv-card-qtyrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed #e5eaf0;
+}
+.mv-bigqty {
+  font-size: 34px;
+  font-weight: 900;
+  color: #123c63;
+  line-height: 1;
+  min-width: 30px;
+}
+.mv-card-conqty .mv-bigqty { color: #0d6e2e; }
+.mv-bigqty-lbl {
+  font-size: 12px;
+  color: #8a97a5;
+  flex: 1;
+}
+.mv-qty-edit {
+  border: 1.5px solid #ccd5df;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+/* Variantes: fila tap con número grande a la derecha */
+.mv-var-row.mv-tap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px;
+}
+.mv-var-name { font-size: 14px; }
+.mv-var-bigqty {
+  font-size: 24px;
+  font-weight: 900;
+  color: #123c63;
+  margin-left: auto;
+  min-width: 26px;
+  text-align: right;
+}
+.mv-var-conqty { background: #eef4fa; border-radius: 8px; }
+.mv-var-conqty .mv-var-bigqty { color: #0d6e2e; }
+
+/* Feedback al sumar */
+@keyframes mvBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); color: #16a34a; }
+  100% { transform: scale(1); }
+}
+.mv-bump { animation: mvBump 0.22s ease; }
+
+.mv-tap { cursor: pointer; -webkit-tap-highlight-color: rgba(18,60,99,0.1); }
+.mv-tap:active { transform: scale(0.985); }

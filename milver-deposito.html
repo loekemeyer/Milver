@@ -1,0 +1,79 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Milver · Depósito</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="css/milver.css?v=9" />
+    <link rel="stylesheet" href="css/milver-deposito.css?v=9" />
+  </head>
+
+  <body class="dep-body">
+    <!-- LOGIN: PIN de depósito + nombre del operario -->
+    <div id="loginOverlay" class="mv-login-overlay">
+      <div class="mv-login-card">
+        <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
+        <p class="mv-login-sub">Depósito — armado de pedidos</p>
+        <label class="mv-label" for="loginOperario">Tu nombre</label>
+        <input id="loginOperario" class="mv-input" type="text" placeholder="Nombre del operario" autocomplete="name" />
+        <label class="mv-label" for="loginPin">PIN de depósito</label>
+        <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" />
+        <div id="loginError" class="mv-login-error" style="display:none"></div>
+        <button type="button" id="loginBtn" class="mv-btn mv-btn-primary" onclick="doLogin()">Entrar</button>
+      </div>
+    </div>
+
+    <header class="dep-header">
+      <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img" />
+      <span class="dep-header-title">Depósito</span>
+      <span id="depVersion" class="mv-version"></span>
+      <span id="operarioTag" class="dep-operario"></span>
+      <button type="button" class="dep-salir" onclick="logout()">Salir</button>
+    </header>
+
+    <main class="dep-main">
+      <!-- COLA DE PEDIDOS -->
+      <section id="pantallaCola" class="dep-pantalla active">
+        <div class="dep-cola-head">
+          <h2>Pedidos a armar</h2>
+          <button type="button" class="dep-refresh" onclick="loadCola()">⟳ Actualizar</button>
+        </div>
+        <div id="colaLista" class="dep-cola"></div>
+      </section>
+
+      <!-- DETALLE + BOTONERA -->
+      <section id="pantallaPedido" class="dep-pantalla">
+        <div class="dep-top-bar">
+          <span class="dep-back" onclick="volverACola()">←</span>
+          <span id="pedidoTitulo" class="dep-pedido-titulo"></span>
+          <span id="pedidoEstado" class="dep-estado"></span>
+        </div>
+        <div id="pedidoInfo" class="dep-pedido-info"></div>
+        <div id="pedidoItems" class="dep-items"></div>
+
+        <div class="botonera-grp">Botonera</div>
+        <div class="row row-3">
+          <div class="box" data-code="EA" id="btnEA" onclick="marcar('EA')">
+            <div class="box-title">▶ EA</div>
+            <div class="box-desc">Empezar armado</div>
+          </div>
+          <div class="box" data-code="TA" id="btnTA" onclick="marcar('TA')">
+            <div class="box-title">✔ TA</div>
+            <div class="box-desc">Armado listo</div>
+          </div>
+          <div class="box" data-code="DES" id="btnDES" onclick="marcar('DES')">
+            <div class="box-title">🚚 DES</div>
+            <div class="box-desc">Despachado</div>
+          </div>
+        </div>
+        <div id="marcarResultado" class="dep-resultado"></div>
+      </section>
+    </main>
+
+    <script src="version.js?v=9"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="milver-deposito.js?v=9"></script>
+  </body>
+</html>
