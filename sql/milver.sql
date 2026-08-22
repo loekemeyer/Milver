@@ -1029,3 +1029,9 @@ update public.milver_settings set valor = '0' where clave = 'web_order_discount'
 -- milver_dep_pedidos ahora trae progreso (items_pick/items_total/faltantes).
 -- Definiciones desplegadas en la base; regenerar con pg_get_functiondef.
 -- ============================================================
+
+-- v10 — editar / anular pedido del comisionista (solo estado 'nuevo')
+-- milver_edit_order(p_comisionista_id, p_pin, p_numero, metodo, obs, items)
+--   reemplaza ítems y recalcula; rechaza si el pedido ya está en depósito.
+-- milver_cancel_order(p_comisionista_id, p_pin, p_numero) borra el pedido.
+-- Definiciones desplegadas en la base; regenerar con pg_get_functiondef.

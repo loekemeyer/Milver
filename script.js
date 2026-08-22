@@ -28,6 +28,7 @@ let sortMode = "cod";
 let lastConfirmedOrder = null;
 let surtidoSet = new Set(); // cods que el cliente elegido le compra a Milver
 let soloSurtido = false;    // filtro "solo lo que compra"
+let editandoPedido = null;  // nº de pedido en edición (null = pedido nuevo)
 
 const CATEGORY_ORDER = ["Loekemeyer", "Cocina", "Bazar", "Limpieza", "Organización", "Textil"];
 const PAGE_SIZE = 48;     // cards por tanda de render (scroll infinito)
@@ -153,7 +154,8 @@ async function doLogin() {
     localStorage.setItem("milver_session", JSON.stringify(session));
   } catch (e) {}
   syncLoginUI();
-  loadClientes();
+  await loadClientes();
+  restaurarBorrador();
   renderProducts();
   showSection("inicio");
 }
@@ -650,6 +652,42 @@ function updateCartCount() {
   const el = $("cartCount");
   if (el) el.textContent = cart.reduce((s, i) => s + i.qty, 0);
   updateCartBar();
+  guardarBorrador();
+}
+
+// Borrador persistente: si el comisionista cierra la página, no pierde el
+// carrito. Se guarda por comisionista y no se pisa entre sesiones distintas.
+function guardarBorrador() {
+  if (!session) return;
+  try {
+    const key = "milver_borrador_" + session.id;
+    if (cart.length) {
+      localStorage.setItem(key, JSON.stringify({
+        cart, clienteCod: clienteSel?.cod || null, editando: editandoPedido, at: Date.now(),
+      }));
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch (e) {}
+}
+
+function restaurarBorrador() {
+  if (!session) return;
+  try {
+    const raw = localStorage.getItem("milver_borrador_" + session.id);
+    if (!raw) return;
+    const b = JSON.parse(raw);
+    if (!b.cart || !b.cart.length) return;
+    cart = b.cart;
+    editandoPedido = b.editando || null;
+    if (b.clienteCod && clientes.length) setCliente(b.clienteCod);
+    updateCartCount();
+  } catch (e) {}
+}
+
+function limpiarBorrador() {
+  if (!session) return;
+  try { localStorage.removeItem("milver_borrador_" + session.id); } catch (e) {}
 }
 
 // Barra fija de abajo: total del pedido siempre a la vista y a un toque.
@@ -696,6 +734,18 @@ function renderCart() {
   const totalsBox = $("cartTotals");
   const submitBtn = $("submitBtn");
   if (!box) return;
+
+  // Banner si estamos editando un pedido existente
+  const banner = $("editBanner");
+  if (banner) {
+    if (editandoPedido) {
+      banner.style.display = "";
+      banner.innerHTML = `Editando pedido <strong>#${editandoPedido}</strong> · <button type="button" class="mv-clear" onclick="cancelarEdicion()">✕ cancelar edición</button>`;
+    } else {
+      banner.style.display = "none";
+    }
+  }
+  if (submitBtn) submitBtn.textContent = editandoPedido ? "Guardar cambios" : "Confirmar pedido";
 
   if (!cart.length) {
     box.innerHTML = `<div class="mv-cart-empty">El pedido está vacío. Agregá artículos desde Productos.` +
@@ -753,14 +803,20 @@ async function submitOrder() {
     btn.disabled = true;
     btn.textContent = "Enviando…";
   }
-  const { data, error } = await supabaseClient.rpc("milver_submit_order", {
-    p_comisionista_id: session.id,
-    p_pin: session.pin,
-    p_cliente_cod: clienteSel.cod,
-    p_metodo_pago: $("mvPaymentSelect")?.value || "Contado",
-    p_observaciones: ($("obsInput")?.value || "").trim() || null,
-    p_items: cart.map((i) => ({ cod: i.cod, unidades: i.qty })),
-  });
+  const esEdicion = !!editandoPedido;
+  const { data, error } = esEdicion
+    ? await supabaseClient.rpc("milver_edit_order", {
+        p_comisionista_id: session.id, p_pin: session.pin, p_numero: editandoPedido,
+        p_metodo_pago: $("mvPaymentSelect")?.value || "Contado",
+        p_observaciones: ($("obsInput")?.value || "").trim() || null,
+        p_items: cart.map((i) => ({ cod: i.cod, unidades: i.qty })),
+      })
+    : await supabaseClient.rpc("milver_submit_order", {
+        p_comisionista_id: session.id, p_pin: session.pin, p_cliente_cod: clienteSel.cod,
+        p_metodo_pago: $("mvPaymentSelect")?.value || "Contado",
+        p_observaciones: ($("obsInput")?.value || "").trim() || null,
+        p_items: cart.map((i) => ({ cod: i.cod, unidades: i.qty })),
+      });
   if (btn) {
     btn.disabled = false;
     btn.textContent = "Confirmar pedido";
@@ -786,7 +842,9 @@ async function submitOrder() {
                unidades: i.qty, precio_neto: neto, subtotal: neto * i.qty };
     }),
   };
+  editandoPedido = null;
   cart = [];
+  limpiarBorrador();
   updateCartCount();
   const det = $("confirmDetalle");
   if (det) {
@@ -797,6 +855,18 @@ async function submitOrder() {
     `;
   }
   showSection("pedidoConfirmado");
+}
+
+function cancelarEdicion() {
+  editandoPedido = null;
+  cart = [];
+  limpiarBorrador();
+  updateCartCount();
+  const obs = $("obsInput");
+  if (obs) obs.value = "";
+  renderCart();
+  showSection("productos");
+  renderProducts();
 }
 
 function nuevoPedido() {
@@ -826,6 +896,40 @@ async function repetirUltimoPedido() {
     if (findProduct(it.cod)) setQty(it.cod, it.unidades);
   }
   renderCart();
+}
+
+/***********************
+ * EDITAR / ANULAR PEDIDO (solo mientras esté "nuevo")
+ ***********************/
+function editarPedido(numero) {
+  const o = _histPedidos.find((p) => p.numero === numero);
+  if (!o) return;
+  cart = (o.items || []).map((i) => {
+    const p = findProduct(i.cod) || {};
+    return { cod: String(i.cod), descripcion: i.descripcion, variante: i.variante,
+             list_price: Number(p.list_price || 0), qty: Number(i.unidades) };
+  });
+  editandoPedido = numero;
+  setCliente(o.cliente_cod);
+  const pay = $("mvPaymentSelect");
+  if (pay && o.metodo_pago) pay.value = o.metodo_pago;
+  const obs = $("obsInput");
+  if (obs) obs.value = o.observaciones || "";
+  updateCartCount();
+  showSection("carrito");
+}
+
+async function anularPedido(numero) {
+  if (!confirm(`¿Anular el pedido #${numero}? No se puede deshacer.`)) return;
+  const { data, error } = await supabaseClient.rpc("milver_cancel_order", {
+    p_comisionista_id: session.id, p_pin: session.pin, p_numero: numero,
+  });
+  if (error || !data?.ok) {
+    alert(data?.error || "No se pudo anular.");
+    return;
+  }
+  if (editandoPedido === numero) { editandoPedido = null; cart = []; limpiarBorrador(); updateCartCount(); }
+  loadHistorial();
 }
 
 /***********************
@@ -1068,7 +1172,13 @@ function renderHistorial(codForzado) {
               )
               .join("")}
             ${o.observaciones ? `<div class="mv-hist-obs">Obs: ${o.observaciones}</div>` : ""}
-            <button type="button" class="mv-btn mva-btn-sec mv-btn-pdf" onclick='descargarPDFPedido(${JSON.stringify(o).replace(/'/g, "&#39;")})'>📄 PDF</button>
+            <div class="mv-hist-acciones">
+              <button type="button" class="mv-btn mva-btn-sec mv-btn-pdf" onclick='descargarPDFPedido(${JSON.stringify(o).replace(/'/g, "&#39;")})'>📄 PDF</button>
+              ${(o.estado === "nuevo" || !o.estado)
+                ? `<button type="button" class="mv-btn mva-btn-sec" onclick="editarPedido(${o.numero})">✎ Editar</button>
+                   <button type="button" class="mv-btn mv-btn-anular" onclick="anularPedido(${o.numero})">🗑 Anular</button>`
+                : `<span class="mv-hist-estado">En depósito</span>`}
+            </div>
           </div>
         </details>
       `;
@@ -1085,7 +1195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   restoreSession();
   loadCatalog();
   if (session) {
-    loadClientes();
+    loadClientes().then(restaurarBorrador);
     showSection("inicio");
   }
   setupInfiniteScroll();
@@ -1131,6 +1241,9 @@ window.logout = logout;
 window.setCategory = setCategory;
 window.clearSearch = clearSearch;
 window.repetirUltimoPedido = repetirUltimoPedido;
+window.editarPedido = editarPedido;
+window.anularPedido = anularPedido;
+window.cancelarEdicion = cancelarEdicion;
 window.loadInicio = loadInicio;
 window.renderHistorial = renderHistorial;
 window.filtrarHistCliente = filtrarHistCliente;
