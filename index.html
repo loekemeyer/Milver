@@ -9,14 +9,15 @@
       content="Portal de carga de pedidos para comisionistas de Milver."
     />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/styles.css?v=7" />
-    <link rel="stylesheet" href="css/milver.css?v=7" />
+    <link rel="stylesheet" href="css/styles.css?v=8" />
+    <link rel="stylesheet" href="css/milver.css?v=8" />
   </head>
 
   <body>
     <header class="header">
       <div class="logo">
         <span class="mv-logo">MILVER</span>
+        <span id="mvVersion" class="mv-version"></span>
       </div>
 
       <div class="header-center" id="headerCenter"></div>
@@ -115,6 +116,7 @@
             </select>
           </div>
         </div>
+        <div id="catChips" class="mv-chips"></div>
         <div id="productsContainer" class="products-grid mv-grid"></div>
         <div id="loadMoreSentinel" class="mv-sentinel"></div>
       </section>
@@ -172,7 +174,15 @@
       </section>
     </main>
 
+    <!-- Barra fija con el pedido en curso: siempre a un toque del carrito -->
+    <button type="button" id="cartBar" class="mv-cartbar" style="display:none" onclick="showSection('carrito')">
+      <span class="mv-cartbar-ico">🛒</span>
+      <span id="cartBarInfo" class="mv-cartbar-info"></span>
+      <span class="mv-cartbar-btn">Ver pedido →</span>
+    </button>
+
+    <script src="version.js?v=8"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=7"></script>
+    <script src="script.js?v=8"></script>
   </body>
 </html>
