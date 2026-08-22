@@ -134,6 +134,14 @@ PIN demo: **9999**. Pestañas:
 | Clientes | ABM, buscador, importador Excel, **asignación masiva de carteras** |
 | Comisionistas | alta, renombrar, cambiar PIN, activar/desactivar |
 | Ventas | **importador Excel de ventas**; reconstruye el surtido real de cada cliente del archivo |
+| Ganancias | venta/costo/ganancia por día y por pedido, con **descarga Excel** |
+| Análisis | **ranking de productos más pedidos** y **comparativo por comisionista** (pedidos, clientes, venta, ganancia, margen, ticket promedio) en un rango, cada uno con descarga Excel |
+
+La pestaña **Catálogo** además permite **editar precio y costo** de un
+producto: buscador por código/descripción y edición inline (el margen se
+recalcula al guardar). RPCs: `milver_admin_ranking_productos`,
+`milver_admin_comparativo`, `milver_admin_set_precio`,
+`milver_admin_productos`.
 
 El importador detecta columnas por NOMBRE de encabezado (flexible: `cod`/`codigo`,
 `precio`/`list_price`, etc.), nunca por posición — lección aprendida del

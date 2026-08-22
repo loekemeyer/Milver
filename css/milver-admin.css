@@ -193,6 +193,14 @@
 .mva-table tr:hover td {
   background: #f6f9fc;
 }
+.mva-table tr.mva-total-row td {
+  background: #eef4fb;
+  border-top: 2px solid #123c63;
+  font-weight: 600;
+}
+.mva-table tr.mva-total-row:hover td {
+  background: #eef4fb;
+}
 .mva-mini-btn {
   border: 1px solid #ccd5df;
   background: #fff;

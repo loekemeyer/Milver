@@ -1035,3 +1035,130 @@ update public.milver_settings set valor = '0' where clave = 'web_order_discount'
 --   reemplaza ítems y recalcula; rechaza si el pedido ya está en depósito.
 -- milver_cancel_order(p_comisionista_id, p_pin, p_numero) borra el pedido.
 -- Definiciones desplegadas en la base; regenerar con pg_get_functiondef.
+
+-- ============================================================
+-- v11 — mejoras del panel admin: ranking de productos, comparativo por
+-- comisionista, edición de precio/costo. Todas validan milver_admin_ok.
+-- ============================================================
+
+-- Ranking de productos más pedidos en un rango (por unidades; con venta,
+-- costo y ganancia). Default últimos 30 días.
+create or replace function public.milver_admin_ranking_productos(
+  p_pin text, p_desde date default null, p_hasta date default null, p_limit integer default 50)
+returns jsonb
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_desde date; v_hasta date;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  v_desde := coalesce(p_desde, current_date - 29);
+  v_hasta := coalesce(p_hasta, current_date);
+  return jsonb_build_object('ok', true,
+    'desde', v_desde, 'hasta', v_hasta,
+    'productos', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'cod', t.item_cod, 'descripcion', t.descripcion, 'variante', t.variante,
+        'unidades', t.unidades, 'pedidos', t.pedidos,
+        'venta', t.venta, 'costo', t.costo, 'ganancia', t.venta - t.costo)
+        order by t.unidades desc)
+      from (
+        select i.item_cod,
+               max(i.descripcion) as descripcion, max(i.variante) as variante,
+               sum(i.unidades) as unidades, count(distinct o.id) as pedidos,
+               sum(i.subtotal) as venta, sum(i.costo_unit * i.unidades) as costo
+        from milver_orders o join milver_order_items i on i.order_id = o.id
+        where o.created_at::date between v_desde and v_hasta
+        group by i.item_cod
+        order by sum(i.unidades) desc
+        limit greatest(1, coalesce(p_limit, 50))
+      ) t
+    ), '[]'::jsonb));
+end $$;
+
+-- Comparativo por comisionista en un rango (incluye los que no vendieron).
+create or replace function public.milver_admin_comparativo(
+  p_pin text, p_desde date default null, p_hasta date default null)
+returns jsonb
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_desde date; v_hasta date;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  v_desde := coalesce(p_desde, current_date - 29);
+  v_hasta := coalesce(p_hasta, current_date);
+  return jsonb_build_object('ok', true,
+    'desde', v_desde, 'hasta', v_hasta,
+    'comisionistas', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', c.id, 'nombre', c.nombre, 'activo', c.activo,
+        'pedidos', coalesce(a.pedidos, 0), 'clientes', coalesce(a.clientes, 0),
+        'venta', coalesce(a.venta, 0), 'costo', coalesce(a.costo, 0),
+        'ganancia', coalesce(a.venta, 0) - coalesce(a.costo, 0),
+        'ticket', case when coalesce(a.pedidos,0) > 0 then round(coalesce(a.venta,0) / a.pedidos, 2) else 0 end)
+        order by coalesce(a.venta, 0) desc, c.nombre)
+      from milver_comisionistas c
+      left join (
+        select o.comisionista_id, count(distinct o.id) as pedidos,
+               count(distinct o.cliente_cod) as clientes,
+               sum(i.subtotal) as venta, sum(i.costo_unit * i.unidades) as costo
+        from milver_orders o join milver_order_items i on i.order_id = o.id
+        where o.created_at::date between v_desde and v_hasta
+        group by o.comisionista_id
+      ) a on a.comisionista_id = c.id
+    ), '[]'::jsonb));
+end $$;
+
+-- Editar precio de lista y/o costo de un producto (coalesce: deja lo no enviado).
+create or replace function public.milver_admin_set_precio(
+  p_pin text, p_cod text, p_list_price numeric default null, p_cost numeric default null)
+returns jsonb
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_row milver_products%rowtype;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  update milver_products
+     set list_price = coalesce(p_list_price, list_price),
+         cost       = coalesce(p_cost, cost)
+   where cod = p_cod
+   returning * into v_row;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Producto inexistente');
+  end if;
+  return jsonb_build_object('ok', true, 'cod', v_row.cod,
+    'list_price', v_row.list_price, 'cost', v_row.cost);
+end $$;
+
+-- Buscar productos para editar precio/costo (por código exacto o descripción).
+create or replace function public.milver_admin_productos(
+  p_pin text, p_q text default '', p_limit integer default 100)
+returns jsonb
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_q text;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  v_q := lower(trim(coalesce(p_q, '')));
+  return jsonb_build_object('ok', true,
+    'productos', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'cod', p.cod, 'descripcion', p.descripcion, 'categoria', p.categoria,
+        'variante', p.variante, 'uxb', p.uxb,
+        'list_price', p.list_price, 'cost', p.cost, 'activo', p.activo)
+        order by p.activo desc, p.descripcion)
+      from (
+        select * from milver_products
+        where v_q = '' or lower(cod) = v_q or lower(descripcion) like '%' || v_q || '%'
+        order by activo desc, descripcion
+        limit greatest(1, coalesce(p_limit, 100))
+      ) p
+    ), '[]'::jsonb));
+end $$;
