@@ -29,7 +29,7 @@ let lastConfirmedOrder = null;
 let surtidoSet = new Set(); // cods que el cliente elegido le compra a Milver
 let soloSurtido = false;    // filtro "solo lo que compra"
 
-const CATEGORY_ORDER = ["Cocina", "Bazar", "Limpieza", "Organización", "Textil"];
+const CATEGORY_ORDER = ["Loekemeyer", "Cocina", "Bazar", "Limpieza", "Organización", "Textil"];
 const PAGE_SIZE = 48;     // cards por tanda de render (scroll infinito)
 let _renderLimit = PAGE_SIZE;
 
@@ -37,6 +37,19 @@ const $ = (id) => document.getElementById(id);
 
 function formatMoney(n) {
   return Math.round(Number(n || 0)).toLocaleString("es-AR");
+}
+
+// Parte numérica del cod ("L506" → 506); sin dígitos → al fondo.
+function codNum(cod) {
+  const n = parseInt(String(cod).replace(/\D/g, ""), 10);
+  return Number.isFinite(n) ? n : 99999999;
+}
+
+// ¿El cod matchea la búsqueda por código? Exacto, con o sin el prefijo
+// L de los artículos Loekemeyer ("506" encuentra "L506" y viceversa).
+function codMatch(cod, q) {
+  const c = String(cod).toLowerCase();
+  return c === q || c === "l" + q || c.replace(/^l/, "") === q;
 }
 
 /***********************
@@ -163,14 +176,16 @@ async function loadCatalog() {
           categoria: p.categoria,
           uxb: p.uxb,
           list_price: Number(p.list_price || 0),
-          minCod: Number(p.cod),
+          minCod: codNum(p.cod),
+          compraLk: !!p.compra_lk,
+          ordenLk: p.orden_lk,
           variantes: [],
         };
         byMadre.set(p.madre_cod, a);
         articles.push(a);
       }
       a.variantes.push(p);
-      a.minCod = Math.min(a.minCod, Number(p.cod));
+      a.minCod = Math.min(a.minCod, codNum(p.cod));
     } else {
       articles.push({
         key: p.cod,
@@ -178,7 +193,9 @@ async function loadCatalog() {
         categoria: p.categoria,
         uxb: p.uxb,
         list_price: Number(p.list_price || 0),
-        minCod: Number(p.cod),
+        minCod: codNum(p.cod),
+        compraLk: !!p.compra_lk,
+        ordenLk: p.orden_lk,
         variantes: null,
         item: p,
       });
@@ -277,7 +294,10 @@ function articleEnSurtido(a) {
 function buildCategoriesMenu() {
   const menu = $("categoriesMenu");
   if (!menu) return;
-  const cats = CATEGORY_ORDER.filter((c) => articles.some((a) => a.categoria === c));
+  const existentes = [...new Set(articles.map((a) => a.categoria))];
+  const cats = CATEGORY_ORDER.filter((c) => existentes.includes(c)).concat(
+    existentes.filter((c) => !CATEGORY_ORDER.includes(c)).sort((a, b) => a.localeCompare(b, "es")),
+  );
   menu.innerHTML =
     `<button type="button" class="dropdown-item" onclick="setCategory('')">Todas</button>` +
     cats
@@ -307,16 +327,19 @@ function getFilteredArticles() {
   let list = articles;
   if (categoryFilter) list = list.filter((a) => a.categoria === categoryFilter);
   if (q) {
+    // Búsqueda por CÓDIGO: query de dígitos (o L+dígitos, o dígitos+letra,
+    // ej. "525e") → match exacto de código. Si no, por descripción.
+    const esCod = /^l?\d+[a-z]?$/.test(q);
     list = list.filter((a) => {
+      if (esCod) {
+        if (a.variantes) return a.variantes.some((v) => codMatch(v.cod, q));
+        return codMatch(a.key, q);
+      }
       if (a.descripcion.toLowerCase().includes(q)) return true;
       if (a.variantes) {
-        return a.variantes.some(
-          (v) =>
-            String(v.cod).includes(q) ||
-            v.descripcion.toLowerCase().includes(q),
-        );
+        return a.variantes.some((v) => v.descripcion.toLowerCase().includes(q));
       }
-      return String(a.key).includes(q);
+      return false;
     });
   }
   if (soloSurtido && surtidoSet.size) {
@@ -332,7 +355,13 @@ function getFilteredArticles() {
   } else {
     sorted.sort((a, b) => a.minCod - b.minCod);
   }
-  // Con cliente elegido, lo que él compra va primero (estable dentro del orden).
+  // Lo que Milver le compra a Loekemeyer va primero (por volumen comprado)…
+  sorted.sort((a, b) => {
+    if (a.compraLk !== b.compraLk) return a.compraLk ? -1 : 1;
+    if (a.compraLk && b.compraLk) return (a.ordenLk || 9e9) - (b.ordenLk || 9e9);
+    return 0;
+  });
+  // …y con cliente elegido, lo que él compra manda por encima de todo.
   if (surtidoSet.size && !soloSurtido) {
     sorted.sort((a, b) => Number(articleEnSurtido(b)) - Number(articleEnSurtido(a)));
   }
@@ -369,6 +398,9 @@ function buildCard(a) {
   const surtidoBadge = compra
     ? '<div class="mv-badge-surtido" title="Este cliente le compra este artículo a Milver">★ Te compra</div>'
     : "";
+  const lkBadge = a.compraLk
+    ? '<div class="mv-badge-lk" title="Artículo que Milver le compra a Loekemeyer">LOEKE</div>'
+    : "";
   const priceHtml = `
     <div class="card-prices">
       <div class="card-price-line">
@@ -379,7 +411,7 @@ function buildCard(a) {
   if (a.variantes) {
     return `
       <div class="product-card mv-card mv-card-madre${compra ? " mv-card-surtido" : ""}">
-        ${surtidoBadge}
+        ${surtidoBadge}${lkBadge}
         <div class="card-top">
           <div class="card-row">
             <div class="card-cod">Cods: <span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span></div>
@@ -399,7 +431,7 @@ function buildCard(a) {
   const qty = qtyOf(p.cod);
   return `
     <div class="product-card mv-card${compra ? " mv-card-surtido" : ""}">
-      ${surtidoBadge}
+      ${surtidoBadge}${lkBadge}
       <div class="card-top">
         <div class="card-row">
           <div class="card-cod">Cod: <span>${p.cod}</span></div>
