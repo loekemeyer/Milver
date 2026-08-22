@@ -1174,3 +1174,18 @@ end $$;
 -- Sin salida automática (mail/Sheet): el aviso es in-app. Definiciones
 -- completas desplegadas en la base; regenerar con pg_get_functiondef.
 -- ============================================================
+
+-- ============================================================
+-- v13 — login por rol con lista desplegable de nombres.
+-- El portal (index.html) tiene tres botones de rol: Comisionista, Armador
+-- de pedidos y Admin. Admin solo pide PIN; los otros dos eligen el nombre
+-- de una lista y ponen PIN. Armador y Admin, al validar, redirigen a
+-- milver-deposito.html / milver-admin.html (setean la sesión que esas
+-- páginas leen). El login standalone del depósito también usa el desplegable.
+--
+-- Nuevo padrón de operarios (el depósito no tenía cuentas por operario; el
+-- PIN sigue siendo el compartido de depósito, el nombre se elige de la lista):
+--   milver_operarios (id, nombre, activo) + seed demo (Operario 1..3).
+-- Listas públicas para poblar los desplegables (solo id + nombre de activos,
+-- el PIN nunca sale de acá): milver_comisionistas_pub(), milver_operarios_pub().
+-- ============================================================

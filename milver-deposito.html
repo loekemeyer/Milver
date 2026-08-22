@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=10" />
-    <link rel="stylesheet" href="css/milver-deposito.css?v=10" />
+    <link rel="stylesheet" href="css/milver.css?v=21" />
+    <link rel="stylesheet" href="css/milver-deposito.css?v=21" />
   </head>
 
   <body class="dep-body">
@@ -17,7 +17,7 @@
         <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
         <p class="mv-login-sub">Depósito — armado de pedidos</p>
         <label class="mv-label" for="loginOperario">Tu nombre</label>
-        <input id="loginOperario" class="mv-input" type="text" placeholder="Nombre del operario" autocomplete="name" />
+        <select id="loginOperario" class="mv-select"></select>
         <label class="mv-label" for="loginPin">PIN de depósito</label>
         <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" />
         <div id="loginError" class="mv-login-error" style="display:none"></div>
@@ -102,8 +102,8 @@
       </div>
     </div>
 
-    <script src="version.js?v=10"></script>
+    <script src="version.js?v=21"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="milver-deposito.js?v=10"></script>
+    <script src="milver-deposito.js?v=21"></script>
   </body>
 </html>

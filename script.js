@@ -104,50 +104,104 @@ function syncLoginUI() {
   }
 }
 
-async function doLogin() {
-  const nombre = ($("loginNombre")?.value || "").trim();
-  const pin = ($("loginPin")?.value || "").trim();
+let loginRole = "comisionista"; // comisionista | armador | admin
+let _loginListas = { comisionista: null, armador: null }; // cache de nombres
+
+// Cambiar el rol seleccionado en el login: muestra/oculta el desplegable de
+// nombres y ajusta la etiqueta. Admin solo pide PIN.
+function setRole(role) {
+  loginRole = role;
+  document.querySelectorAll(".mv-role-tab").forEach((t) =>
+    t.classList.toggle("active", t.dataset.role === role));
+  const field = $("loginNombreField");
+  const label = $("loginNombreLabel");
   const errBox = $("loginError");
-  if (!nombre || !pin) {
-    if (errBox) {
-      errBox.textContent = "Completá nombre y PIN.";
-      errBox.style.display = "";
-    }
+  if (errBox) errBox.style.display = "none";
+  const pinInp = $("loginPin");
+  if (pinInp) pinInp.value = "";
+  if (role === "admin") {
+    if (field) field.style.display = "none";
     return;
   }
-  const btn = $("loginBtn");
-  if (btn) btn.disabled = true;
+  if (field) field.style.display = "";
+  if (label) label.textContent = role === "armador" ? "Operario" : "Comisionista";
+  poblarLoginNombres(role);
+}
 
-  // Atajos de acceso desde el mismo login: "admin" o "deposito" + su PIN
-  // llevan directo al panel correspondiente (sin recordar la URL).
-  const nlow = nombre.toLowerCase();
-  if (["admin", "administrador", "milver"].includes(nlow)) {
+// Trae la lista de nombres del rol y llena el <select> (con caché).
+async function poblarLoginNombres(role) {
+  const sel = $("loginNombre");
+  if (!sel) return;
+  if (_loginListas[role]) {
+    _pintarLoginNombres(sel, _loginListas[role], role);
+    return;
+  }
+  sel.innerHTML = "<option>Cargando…</option>";
+  const fn = role === "armador" ? "milver_operarios_pub" : "milver_comisionistas_pub";
+  const { data } = await supabaseClient.rpc(fn);
+  const lista = Array.isArray(data) ? data : [];
+  _loginListas[role] = lista;
+  _pintarLoginNombres(sel, lista, role);
+}
+
+function _pintarLoginNombres(sel, lista, role) {
+  if (!lista.length) {
+    sel.innerHTML = `<option value="">Sin ${role === "armador" ? "operarios" : "comisionistas"} cargados</option>`;
+    return;
+  }
+  sel.innerHTML =
+    '<option value="">Elegí tu nombre…</option>' +
+    lista.map((c) => `<option value="${c.nombre}">${c.nombre}</option>`).join("");
+}
+
+async function doLogin() {
+  const pin = ($("loginPin")?.value || "").trim();
+  const errBox = $("loginError");
+  const btn = $("loginBtn");
+  const falla = (msg) => {
+    if (btn) btn.disabled = false;
+    if (errBox) { errBox.textContent = msg; errBox.style.display = ""; }
+  };
+  if (!pin) return falla("Ingresá el PIN.");
+
+  // --- ADMIN: solo PIN → panel de administración ---
+  if (loginRole === "admin") {
+    if (btn) btn.disabled = true;
     const r = await supabaseClient.rpc("milver_admin_login", { p_pin: pin });
     if (r.data?.ok) {
       try { sessionStorage.setItem("milver_admin_pin", pin); } catch (e) {}
       location.href = "milver-admin.html";
       return;
     }
-    if (btn) btn.disabled = false;
-    if (errBox) { errBox.textContent = "PIN de admin incorrecto."; errBox.style.display = ""; }
-    return;
-  }
-  if (["deposito", "depósito", "deposito milver"].includes(nlow)) {
-    location.href = "milver-deposito.html";
-    return;
+    return falla("PIN de admin incorrecto.");
   }
 
+  const nombre = ($("loginNombre")?.value || "").trim();
+  if (!nombre) return falla("Elegí tu nombre de la lista.");
+
+  // --- ARMADOR: nombre de operario + PIN de depósito → panel de depósito ---
+  if (loginRole === "armador") {
+    if (btn) btn.disabled = true;
+    const r = await supabaseClient.rpc("milver_dep_login", { p_pin: pin });
+    if (r.data?.ok) {
+      try {
+        sessionStorage.setItem("milver_dep_pin", pin);
+        sessionStorage.setItem("milver_dep_operario", nombre);
+      } catch (e) {}
+      location.href = "milver-deposito.html";
+      return;
+    }
+    return falla("PIN de depósito incorrecto.");
+  }
+
+  // --- COMISIONISTA: nombre + PIN → portal ---
+  if (btn) btn.disabled = true;
   const { data, error } = await supabaseClient.rpc("milver_login", {
     p_nombre: nombre,
     p_pin: pin,
   });
-  if (btn) btn.disabled = false;
   if (error || !data?.ok) {
-    if (errBox) {
-      errBox.textContent = data?.error || "Error de conexión. Probá de nuevo.";
-      errBox.style.display = "";
-    }
-    return;
+    return falla(data?.error || "PIN incorrecto o error de conexión.");
   }
   session = { id: data.id, nombre: data.nombre, pin };
   try {
@@ -1292,6 +1346,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (session) {
     loadClientes().then(restaurarBorrador);
     showSection("inicio");
+  } else {
+    // login visible: precargar el desplegable de comisionistas
+    setRole("comisionista");
   }
   setupInfiniteScroll();
 
@@ -1347,6 +1404,7 @@ document.addEventListener("DOMContentLoaded", () => {
  ***********************/
 window.showSection = showSection;
 window.doLogin = doLogin;
+window.setRole = setRole;
 window.logout = logout;
 window.setCategory = setCategory;
 window.clearSearch = clearSearch;

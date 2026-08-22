@@ -39,6 +39,21 @@ Al loguearse, el comisionista cae en **Inicio** con:
 El **Historial** suma filtro por cliente (buscador + desplegable). Datos
 desde la RPC `milver_stats` (todo acotado a los pedidos del comisionista).
 
+## Login por rol
+
+El portal (`index.html`) abre con **tres botones de rol**:
+
+- **Comisionista** — elige su nombre de una lista desplegable + PIN → entra al portal.
+- **Armador de pedidos** — elige su nombre de operario de una lista + PIN de
+  depósito → redirige a `milver-deposito.html` (con la sesión ya seteada).
+- **Admin** — solo PIN → redirige a `milver-admin.html`.
+
+Los nombres salen de RPCs públicas que devuelven **solo id + nombre** de los
+activos (`milver_comisionistas_pub`, `milver_operarios_pub`); el PIN nunca se
+expone. Los operarios viven en la tabla `milver_operarios` (el PIN de depósito
+sigue siendo el compartido; el nombre es para registrar quién armó). El login
+propio de `milver-deposito.html` también usa el desplegable de operarios.
+
 ## Comisionistas y carteras
 
 La página NO es para el cliente final: la usa el **comisionista**, que carga

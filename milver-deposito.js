@@ -45,7 +45,22 @@ function restoreSession() {
   if (depPin && operario) {
     setOperarioTag();
     loadCola();
+  } else {
+    poblarOperarios();
   }
+}
+
+// Llenar el desplegable con los operarios activos.
+async function poblarOperarios() {
+  const sel = $("loginOperario");
+  if (!sel) return;
+  sel.innerHTML = "<option>Cargando…</option>";
+  const { data } = await supabaseClient.rpc("milver_operarios_pub");
+  const lista = Array.isArray(data) ? data : [];
+  sel.innerHTML = lista.length
+    ? '<option value="">Elegí tu nombre…</option>' +
+      lista.map((o) => `<option value="${o.nombre}">${o.nombre}</option>`).join("")
+    : '<option value="">Sin operarios cargados</option>';
 }
 
 function syncLoginUI() {
