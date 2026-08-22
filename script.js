@@ -116,6 +116,26 @@ async function doLogin() {
   }
   const btn = $("loginBtn");
   if (btn) btn.disabled = true;
+
+  // Atajos de acceso desde el mismo login: "admin" o "deposito" + su PIN
+  // llevan directo al panel correspondiente (sin recordar la URL).
+  const nlow = nombre.toLowerCase();
+  if (["admin", "administrador", "milver"].includes(nlow)) {
+    const r = await supabaseClient.rpc("milver_admin_login", { p_pin: pin });
+    if (r.data?.ok) {
+      try { sessionStorage.setItem("milver_admin_pin", pin); } catch (e) {}
+      location.href = "milver-admin.html";
+      return;
+    }
+    if (btn) btn.disabled = false;
+    if (errBox) { errBox.textContent = "PIN de admin incorrecto."; errBox.style.display = ""; }
+    return;
+  }
+  if (["deposito", "depósito", "deposito milver"].includes(nlow)) {
+    location.href = "milver-deposito.html";
+    return;
+  }
+
   const { data, error } = await supabaseClient.rpc("milver_login", {
     p_nombre: nombre,
     p_pin: pin,
