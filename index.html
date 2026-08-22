@@ -16,8 +16,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Milver" />
-    <link rel="stylesheet" href="css/styles.css?v=20" />
-    <link rel="stylesheet" href="css/milver.css?v=20" />
+    <link rel="stylesheet" href="css/styles.css?v=21" />
+    <link rel="stylesheet" href="css/milver.css?v=21" />
   </head>
 
   <body>
@@ -89,14 +89,22 @@
       </nav>
     </header>
 
-    <!-- LOGIN -->
+    <!-- LOGIN con selector de rol -->
     <div id="loginOverlay" class="mv-login-overlay">
       <div class="mv-login-card">
         <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
-        <p class="mv-login-sub">Portal de comisionistas — carga de pedidos</p>
+        <p class="mv-login-sub">Ingresá según tu rol</p>
 
-        <label class="mv-label" for="loginNombre">Comisionista</label>
-        <input id="loginNombre" class="mv-input" type="text" placeholder="Nombre y apellido" autocomplete="username" />
+        <div class="mv-role-tabs">
+          <button type="button" class="mv-role-tab active" data-role="comisionista" onclick="setRole('comisionista')">Comisionista</button>
+          <button type="button" class="mv-role-tab" data-role="armador" onclick="setRole('armador')">Armador de pedidos</button>
+          <button type="button" class="mv-role-tab" data-role="admin" onclick="setRole('admin')">Admin</button>
+        </div>
+
+        <div id="loginNombreField">
+          <label class="mv-label" for="loginNombre" id="loginNombreLabel">Comisionista</label>
+          <select id="loginNombre" class="mv-select"></select>
+        </div>
 
         <label class="mv-label" for="loginPin">PIN</label>
         <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
@@ -260,8 +268,8 @@
     </button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="version.js?v=20"></script>
+    <script src="version.js?v=21"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=20"></script>
+    <script src="script.js?v=21"></script>
   </body>
 </html>
