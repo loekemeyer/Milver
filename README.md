@@ -111,12 +111,16 @@ botonera de 3 pasos con guarda de estado:
 |---|---|---|
 | EA (azul) | Empezar armado | en_armado |
 | TA (verde) | Armado listo | armado |
-| DES (gris) | Despachado | despachado |
-
-Cada evento queda registrado en `milver_order_eventos` con el operario y
-la hora; el pedido lleva `estado`/`estado_at`/`armado_por`. Los pedidos
-que entran por el portal aparecen solos en la cola (`estado='nuevo'`), así
-se van **programando** a medida que llegan.
+El armado es **picking ítem por ítem**: al abrir un pedido, el operario ve
+la lista de artículos y marca cada uno como **juntado** (cantidad, que
+puede ser parcial) o **faltante / sin stock**, con un teclado propio.
+Una barra de progreso muestra cuántos ítems lleva. Estados del pedido:
+`nuevo → en_picking → pickeado → despachado`. El botón **Pickeado listo**
+solo se habilita cuando todos los ítems tienen decisión; después
+**Despachar** lo saca. Cada línea guarda cantidad juntada, faltante,
+operario y hora (`pick_unidades`, `pick_falta`, `pick_por`, `pick_at`);
+cada transición queda en `milver_order_eventos`. Los pedidos del portal
+caen solos en la cola como `nuevo` y se van programando al llegar.
 
 ## Panel de administración (`milver-admin.html`)
 

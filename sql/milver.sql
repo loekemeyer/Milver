@@ -1019,3 +1019,13 @@ insert into public.milver_settings values ('deposito_pin_hash', extensions.crypt
 -- milver_settings.web_order_discount = '0'. El neto queda
 -- list_price × (1 - dto_vol del cliente).
 update public.milver_settings set valor = '0' where clave = 'web_order_discount';
+
+-- ============================================================
+-- v9 — picking ítem por ítem (operarios de depósito)
+-- milver_order_items: pick_unidades / pick_falta / pick_por / pick_at.
+-- Estados del pedido: nuevo → en_picking → pickeado → despachado.
+-- RPCs: milver_dep_detalle, milver_dep_pick, milver_dep_pick_undo,
+-- milver_dep_finalizar (TA exige todo pickeado; DES despacha).
+-- milver_dep_pedidos ahora trae progreso (items_pick/items_total/faltantes).
+-- Definiciones desplegadas en la base; regenerar con pg_get_functiondef.
+-- ============================================================
