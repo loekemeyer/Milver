@@ -654,3 +654,21 @@
     gap: 12px;
   }
 }
+
+/* ============================================================
+   iOS: tocar rápido varias veces el mismo botón dispara el zoom
+   por doble-tap. touch-action: manipulation lo desactiva en los
+   controles (el zoom de pellizco sigue funcionando) y de paso
+   elimina el delay de 300ms del tap.
+   ============================================================ */
+.mv-step,
+.mv-qty-input,
+.mv-btn,
+.mv-toggle,
+.mv-select,
+.nav-link,
+.dropdown-item,
+.mva-tab,
+.mva-mini-btn {
+  touch-action: manipulation;
+}
