@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <title>Milver · Administración</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=8" />
-    <link rel="stylesheet" href="css/milver-admin.css?v=8" />
+    <link rel="stylesheet" href="css/milver.css?v=9" />
+    <link rel="stylesheet" href="css/milver-admin.css?v=9" />
   </head>
 
   <body class="mva-body">
     <!-- LOGIN -->
     <div id="loginOverlay" class="mv-login-overlay">
       <div class="mv-login-card">
-        <div class="mv-logo mv-logo-big">MILVER</div>
+        <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
         <p class="mv-login-sub">Panel de administración</p>
         <label class="mv-label" for="loginPin">PIN de administrador</label>
         <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
@@ -23,7 +24,7 @@
     </div>
 
     <header class="mva-header">
-      <span class="mv-logo">MILVER</span>
+      <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img" />
       <span class="mva-header-title">Administración</span>
       <nav class="mva-tabs">
         <button type="button" class="mva-tab active" data-tab="resumen" onclick="showTab('resumen')">Resumen</button>
@@ -32,6 +33,7 @@
         <button type="button" class="mva-tab" data-tab="clientes" onclick="showTab('clientes')">Clientes</button>
         <button type="button" class="mva-tab" data-tab="comisionistas" onclick="showTab('comisionistas')">Comisionistas</button>
         <button type="button" class="mva-tab" data-tab="ventas" onclick="showTab('ventas')">Ventas</button>
+        <button type="button" class="mva-tab" data-tab="ganancias" onclick="showTab('ganancias')">Ganancias</button>
       </nav>
       <div class="mva-header-right">
         <a class="mva-link" href="index.html">← Portal</a>
@@ -68,7 +70,8 @@
             Columnas esperadas (por nombre de encabezado, en cualquier orden):
             <code>cod</code>, <code>descripcion</code>, <code>categoria</code>,
             <code>madre_cod</code>, <code>madre_desc</code>, <code>variante</code>,
-            <code>uxb</code>, <code>precio</code>. Solo <code>cod</code> y
+            <code>uxb</code>, <code>precio</code>, <code>costo</code> (si falta,
+            se asume mitad del precio). Solo <code>cod</code> y
             <code>descripcion</code> son obligatorias. Upsert por código: lo
             existente se actualiza, lo nuevo se crea.
           </p>
@@ -157,10 +160,31 @@
           <div id="ventasResultado" class="mva-resultado"></div>
         </div>
       </section>
+      <!-- GANANCIAS (acceso maestro) -->
+      <section id="tab-ganancias" class="mva-section">
+        <div class="mva-bar">
+          <h2 class="mv-h2">Ganancias</h2>
+          <div class="mva-bar-right">
+            <label class="mv-label" for="ganDesde">Desde</label>
+            <input id="ganDesde" class="mv-input mva-fecha" type="date" onchange="loadGanancias()" />
+            <label class="mv-label" for="ganHasta">Hasta</label>
+            <input id="ganHasta" class="mv-input mva-fecha" type="date" onchange="loadGanancias()" />
+          </div>
+        </div>
+        <div id="ganCards" class="mva-cards"></div>
+        <div class="mva-box">
+          <h3>Por día</h3>
+          <div id="ganDias"></div>
+        </div>
+        <div class="mva-box">
+          <h3>Por pedido</h3>
+          <div id="ganPedidos"></div>
+        </div>
+      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="milver-admin.js?v=8"></script>
+    <script src="milver-admin.js?v=9"></script>
   </body>
 </html>

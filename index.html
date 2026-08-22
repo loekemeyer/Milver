@@ -9,14 +9,15 @@
       content="Portal de carga de pedidos para comisionistas de Milver."
     />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/styles.css?v=8" />
-    <link rel="stylesheet" href="css/milver.css?v=8" />
+    <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
+    <link rel="stylesheet" href="css/styles.css?v=9" />
+    <link rel="stylesheet" href="css/milver.css?v=9" />
   </head>
 
   <body>
     <header class="header">
       <div class="logo">
-        <span class="mv-logo">MILVER</span>
+        <img src="img/logo-milver.jpg" alt="Milver Bazar & Gastronomía" class="mv-logo-img" />
         <span id="mvVersion" class="mv-version"></span>
       </div>
 
@@ -81,7 +82,7 @@
     <!-- LOGIN -->
     <div id="loginOverlay" class="mv-login-overlay">
       <div class="mv-login-card">
-        <div class="mv-logo mv-logo-big">MILVER</div>
+        <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
         <p class="mv-login-sub">Portal de comisionistas — carga de pedidos</p>
 
         <label class="mv-label" for="loginNombre">Comisionista</label>
@@ -174,6 +175,26 @@
       </section>
     </main>
 
+    <!-- Selector de cantidad: se abre al tocar un artículo/variante -->
+    <div id="qtyModal" class="mv-qtymodal" style="display:none" onclick="if(event.target===this)cerrarQtyPicker()">
+      <div class="mv-qtymodal-card">
+        <div id="qtyModalTitulo" class="mv-qtymodal-titulo"></div>
+        <div id="qtyModalPrecio" class="mv-qtymodal-precio"></div>
+        <input id="qtyModalInput" class="mv-qtymodal-input" type="number" min="0" inputmode="numeric" placeholder="0" />
+        <div class="mv-qtymodal-quick">
+          <button type="button" onclick="qtySumar(1)">+1</button>
+          <button type="button" onclick="qtySumar(6)">+6</button>
+          <button type="button" onclick="qtySumar(12)">+12</button>
+          <button type="button" onclick="qtySumar(24)">+24</button>
+        </div>
+        <div class="mv-qtymodal-acciones">
+          <button type="button" class="mv-btn mv-qtymodal-quitar" onclick="qtyQuitar()">Quitar</button>
+          <button type="button" class="mv-btn mva-btn-sec" onclick="cerrarQtyPicker()">Cancelar</button>
+          <button type="button" class="mv-btn mv-btn-primary" onclick="qtyConfirmar()">Aceptar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Barra fija con el pedido en curso: siempre a un toque del carrito -->
     <button type="button" id="cartBar" class="mv-cartbar" style="display:none" onclick="showSection('carrito')">
       <span class="mv-cartbar-ico">🛒</span>
@@ -181,8 +202,8 @@
       <span class="mv-cartbar-btn">Ver pedido →</span>
     </button>
 
-    <script src="version.js?v=8"></script>
+    <script src="version.js?v=9"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=9"></script>
   </body>
 </html>

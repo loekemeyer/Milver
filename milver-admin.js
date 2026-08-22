@@ -91,6 +91,7 @@ function showTab(id) {
   if (id === "pedidos") loadPedidos();
   if (id === "clientes") loadClientes();
   if (id === "comisionistas") loadStats(true);
+  if (id === "ganancias") loadGanancias();
 }
 
 function initData() {
@@ -299,6 +300,7 @@ async function importarCatalogo() {
         variante: String(colVal(f, ["variante", "color", "variedad"])).trim(),
         uxb: Number(colVal(f, ["uxb", "unidades_por_caja", "u_x_b", "bulto"])) || 1,
         list_price: Number(colVal(f, ["precio", "list_price", "precio_lista", "lista"])) || 0,
+        cost: Number(colVal(f, ["costo", "cost", "precio_costo"])) || 0,
       }))
       .filter((r) => r.cod && r.descripcion);
     if (!rows.length) {
@@ -553,6 +555,60 @@ async function altaComisionista() {
 }
 
 /***********************
+ * GANANCIAS (acceso maestro)
+ ***********************/
+const ESTADO_LABEL = { nuevo: "Nuevo", en_armado: "En armado", armado: "Armado", despachado: "Despachado" };
+
+async function loadGanancias() {
+  if (!adminPin) return;
+  const cards = $("ganCards");
+  if (cards) cards.innerHTML = "Cargando…";
+  const r = await rpc("milver_admin_ganancias", {
+    p_pin: adminPin,
+    p_desde: $("ganDesde")?.value || null,
+    p_hasta: $("ganHasta")?.value || null,
+  });
+  if (!r.ok) {
+    if (cards) cards.innerHTML = `<div class="mva-error">${r.error}</div>`;
+    return;
+  }
+  const dias = r.dias || [];
+  const pedidos = r.pedidos || [];
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const hoy = dias.find((d) => d.fecha === hoyStr) || { pedidos: 0, venta: 0, costo: 0, ganancia: 0 };
+  const tot = dias.reduce((a, d) => ({ venta: a.venta + Number(d.venta), ganancia: a.ganancia + Number(d.ganancia), pedidos: a.pedidos + Number(d.pedidos) }), { venta: 0, ganancia: 0, pedidos: 0 });
+  if (cards) {
+    cards.innerHTML = [
+      ["Pedidos HOY", hoy.pedidos, ""],
+      ["Venta HOY", "$" + formatMoney(hoy.venta), ""],
+      ["Ganancia HOY", "$" + formatMoney(hoy.ganancia), hoy.venta > 0 ? Math.round((hoy.ganancia / hoy.venta) * 100) + "% margen" : ""],
+      ["Ganancia período", "$" + formatMoney(tot.ganancia), tot.pedidos + " pedidos · $" + formatMoney(tot.venta) + " venta"],
+    ].map(([t, v, sub]) => `
+      <div class="mva-card">
+        <div class="mva-card-num">${v}</div>
+        <div class="mva-card-tit">${t}</div>
+        ${sub ? `<div class="mva-card-sub">${sub}</div>` : ""}
+      </div>`).join("");
+  }
+  const diasBox = $("ganDias");
+  if (diasBox) {
+    diasBox.innerHTML = dias.length
+      ? `<table class="mva-table"><thead><tr><th>Fecha</th><th>Pedidos</th><th>Venta</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr></thead><tbody>` +
+        dias.map((d) => `<tr><td>${d.fecha}</td><td>${d.pedidos}</td><td>$${formatMoney(d.venta)}</td><td>$${formatMoney(d.costo)}</td><td><strong>$${formatMoney(d.ganancia)}</strong></td><td>${d.venta > 0 ? Math.round((d.ganancia / d.venta) * 100) + "%" : "—"}</td></tr>`).join("") +
+        "</tbody></table>"
+      : "Sin pedidos en el período.";
+  }
+  const pedBox = $("ganPedidos");
+  if (pedBox) {
+    pedBox.innerHTML = pedidos.length
+      ? `<table class="mva-table"><thead><tr><th>#</th><th>Fecha</th><th>Comisionista</th><th>Cliente</th><th>Estado</th><th>Venta</th><th>Ganancia</th></tr></thead><tbody>` +
+        pedidos.map((p) => `<tr><td>${p.numero}</td><td>${new Date(p.fecha).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</td><td>${p.comisionista}</td><td>${p.cliente}</td><td>${ESTADO_LABEL[p.estado] || p.estado}</td><td>$${formatMoney(p.venta)}</td><td><strong>$${formatMoney(p.ganancia)}</strong></td></tr>`).join("") +
+        "</tbody></table>"
+      : "Sin pedidos en el período.";
+  }
+}
+
+/***********************
  * VENTAS
  ***********************/
 async function importarVentas() {
@@ -637,4 +693,5 @@ window.importarClientes = importarClientes;
 window.guardarComisionista = guardarComisionista;
 window.altaComisionista = altaComisionista;
 window.importarVentas = importarVentas;
+window.loadGanancias = loadGanancias;
 window.descargarModeloVentas = descargarModeloVentas;

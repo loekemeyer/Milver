@@ -1,0 +1,254 @@
+/* ============================================================
+   MILVER DEPÓSITO — botonera de armado (usa milver.css de base).
+   Inspirada en la botonera de Producción Virgilio: botones grandes,
+   pocos, con color por acción.
+   ============================================================ */
+
+.dep-body {
+  background: #f4f6f9;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #1c2733;
+  margin: 0;
+}
+
+.dep-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #123c63;
+  color: #fff;
+  padding: 10px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.dep-header .mv-logo-img {
+  height: 30px;
+}
+.dep-header-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.dep-header .mv-version {
+  color: #9fc0e0;
+}
+.dep-operario {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+.dep-salir {
+  border: 1px solid #4a6d92;
+  background: transparent;
+  color: #fff;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.dep-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 14px 12px 60px;
+}
+.dep-pantalla { display: none; }
+.dep-pantalla.active { display: block; }
+
+/* ---------- Cola ---------- */
+.dep-cola-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.dep-cola-head h2 {
+  font-size: 19px;
+  color: #123c63;
+  margin: 0;
+}
+.dep-refresh {
+  border: 1px solid #ccd5df;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #123c63;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.dep-cola {
+  display: grid;
+  gap: 10px;
+}
+.dep-cola-card {
+  text-align: left;
+  border: 2px solid #e0e5eb;
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: block;
+  width: 100%;
+}
+.dep-cola-card:active { transform: scale(0.99); }
+.dep-cola-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dep-cola-num {
+  font-size: 18px;
+  font-weight: 900;
+  color: #123c63;
+}
+.dep-cola-cliente {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.dep-cola-meta {
+  font-size: 13px;
+  color: #667;
+  margin-top: 3px;
+}
+.dep-vacio, .dep-cargando {
+  text-align: center;
+  color: #667;
+  font-size: 16px;
+  padding: 40px 0;
+}
+.dep-sep {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+/* Badges de estado */
+.dep-badge {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.dep-badge-nuevo { background: #fff3cd; color: #8a6d00; }
+.dep-badge-armando { background: #dbeafe; color: #1e40af; }
+.dep-badge-armado { background: #dcfce7; color: #15803d; }
+.dep-badge-desp { background: #e5e7eb; color: #4b5563; }
+
+/* ---------- Detalle + botonera ---------- */
+.dep-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.dep-back {
+  font-size: 30px;
+  cursor: pointer;
+  color: #123c63;
+  line-height: 1;
+  touch-action: manipulation;
+}
+.dep-pedido-titulo {
+  font-size: 18px;
+  font-weight: 800;
+  flex: 1;
+}
+.dep-pedido-info {
+  background: #fff;
+  border: 1px solid #e0e5eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.dep-obs {
+  color: #8a6d00;
+  font-style: italic;
+}
+.dep-items {
+  margin: 12px 0;
+  background: #fff;
+  border: 1px solid #e0e5eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.dep-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #eef1f5;
+}
+.dep-item:last-child { border-bottom: none; }
+.dep-item-cod {
+  font-size: 12px;
+  color: #8a97a5;
+  min-width: 46px;
+  font-weight: 700;
+}
+.dep-item-desc { flex: 1; font-size: 15px; }
+.dep-item-qty {
+  font-size: 20px;
+  font-weight: 900;
+  color: #123c63;
+  white-space: nowrap;
+}
+
+/* Botonera (calcada del patrón Virgilio: EA azul, TA verde, DES gris) */
+.botonera-grp {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+  margin: 14px 2px 6px;
+}
+.row {
+  display: grid;
+  gap: 10px;
+}
+.row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.box {
+  border: 2.5px solid #334155;
+  border-radius: 12px;
+  padding: 20px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.06s, opacity 0.12s;
+  touch-action: manipulation;
+  background: #fff;
+}
+.box:active { transform: scale(0.96); }
+.box-title { font-size: 24px; font-weight: 900; }
+.box-desc { font-size: 12px; margin-top: 5px; color: #475569; }
+.box[data-code="EA"] { border-color: #1e6bd6; background: #eff6ff; }
+.box[data-code="EA"] .box-title { color: #1e40af; }
+.box[data-code="TA"] { border-color: #16a34a; background: #f0fdf4; }
+.box[data-code="TA"] .box-title { color: #15803d; }
+.box[data-code="DES"] { border-color: #475569; background: #f8fafc; }
+.box[data-code="DES"] .box-title { color: #334155; }
+/* Botón no disponible en el estado actual */
+.dep-box-off {
+  opacity: 0.32;
+  filter: grayscale(0.7);
+  pointer-events: none;
+}
+
+.dep-resultado {
+  margin-top: 12px;
+  font-size: 15px;
+  min-height: 20px;
+}
+.mva-ok { color: #1a7f37; background: #edf7ef; border-radius: 8px; padding: 10px 12px; }
+.mva-error { color: #b3261e; background: #fdecea; border-radius: 8px; padding: 10px 12px; }
