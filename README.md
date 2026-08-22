@@ -15,6 +15,19 @@ mismas convenciones (`showSection`, carrito en cajas, precio lista por unidad).
 - Sin fotos: las cards muestran cod, descripción, UxB y precio de lista; los
   artículos madre listan sus variantes en filas con cantidad propia.
 
+## Artículos que Milver le compra a Loekemeyer
+
+Milver S.R.L es el **cliente 2288** del padrón LK. Sus 76 artículos comprados
+(reales: abrelatas, peladores, sacacorchos…) están en el catálogo con cod
+`L`+<cod LK> (ej. `L506`), categoría **Loekemeyer**, chip azul "LOEKE", y
+salen **primero** en el listado, ordenados por volumen comprado. La carga fue
+una lectura puntual de `sales_lines`/`orders` de LK — ninguna pantalla toca
+tablas LK en vivo.
+
+El buscador matchea **código exacto** cuando se tipea un código (`506`
+encuentra `L506` y el `506` demo; `12` no trae `512`) y por **descripción**
+en cualquier otro caso.
+
 ## Comisionistas y carteras
 
 La página NO es para el cliente final: la usa el **comisionista**, que carga

@@ -830,3 +830,31 @@ begin
     from milver_clientes c
   ), '[]'::jsonb));
 end $$;
+
+-- ============================================================
+-- v4 — artículos que Milver le compra a Loekemeyer
+-- Milver S.R.L es el cliente 2288 del padrón LK. Sus compras reales
+-- entran al catálogo con cod 'L'+<cod LK>, compra_lk=true y orden_lk
+-- por volumen comprado, y el catálogo los devuelve PRIMERO.
+-- NOTA: el INSERT de estos artículos lee las tablas de LK (sales_lines,
+-- orders, products) y por eso NO es portable a otro proyecto: al migrar
+-- a un Supabase propio de Milver, exportar las filas compra_lk=true de
+-- milver_products como datos (o re-importarlas por Excel).
+-- ============================================================
+
+alter table public.milver_products
+  add column compra_lk boolean not null default false,
+  add column orden_lk integer;
+
+create or replace function public.milver_catalogo()
+returns jsonb language sql security definer set search_path = public stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'cod', cod, 'descripcion', descripcion, 'categoria', categoria,
+           'madre_cod', madre_cod, 'madre_desc', madre_desc, 'variante', variante,
+           'uxb', uxb, 'list_price', list_price,
+           'compra_lk', compra_lk, 'orden_lk', orden_lk
+         ) order by compra_lk desc, orden_lk nulls last,
+                    (case when cod ~ '^[0-9]+$' then cod::int else 2147483647 end), cod),
+         '[]'::jsonb)
+  from milver_products where activo;
+$$;

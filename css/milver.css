@@ -129,6 +129,14 @@
 /* ---------- Cards sin foto ---------- */
 .mv-grid {
   padding: 18px 24px 60px;
+  /* Sin foto la card mide lo que mide su contenido: un artículo simple
+     no tiene por qué ocupar el alto de uno con 4 variantes. Pisa el
+     grid-auto-rows: 1fr y el min-height: 420px que LK usa para fotos. */
+  grid-auto-rows: auto !important;
+  align-items: start;
+}
+.mv-card {
+  min-height: 0 !important;
 }
 .mv-card {
   padding: 14px;
@@ -450,6 +458,17 @@
 .mv-card-surtido {
   border: 2px solid #1a7f37;
   position: relative;
+}
+.mv-badge-lk {
+  align-self: center;
+  background: #123c63;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  border-radius: 10px;
+  padding: 3px 10px;
+  margin-bottom: 6px;
 }
 .mv-badge-surtido {
   align-self: center;
