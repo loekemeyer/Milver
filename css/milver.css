@@ -1334,3 +1334,11 @@ body.mv-has-cartbar main {
   flex: 1;
   min-width: 160px;
 }
+
+/* Botón PDF (confirmación e historial) */
+.mv-btn-pdf {
+  margin-top: 10px;
+  width: 100%;
+  touch-action: manipulation;
+}
+.mv-hist-items .mv-btn-pdf { margin-top: 8px; }

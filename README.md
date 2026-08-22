@@ -53,6 +53,10 @@ cliente, demo). Al elegir cliente, el catálogo marca esos artículos con borde
 verde + badge "★ Te compra" (y la variante exacta con ★), los ordena primero,
 y el botón "Solo lo que compra" filtra el catálogo a su surtido.
 
+Cada pedido se puede **descargar en PDF** (jsPDF) desde la confirmación y
+desde el historial: encabezado Milver, número, cliente, comisionista,
+tabla de ítems y total.
+
 ## Backend (Supabase)
 
 Vive **en el proyecto Supabase de LK** (`kwkclwhmoygunqmlegrg`), pero TODO lo
