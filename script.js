@@ -19,7 +19,7 @@ let WEB_ORDER_DISCOUNT = 0.02;
 let products = [];        // filas crudas de milver_catalogo (una por ítem/variante)
 let articles = [];        // agrupado: una entrada por artículo (madre con variantes, o simple)
 let clientes = [];
-let cart = [];            // { cod, descripcion, variante, uxb, list_price, qtyCajas }
+let cart = [];            // { cod, descripcion, variante, list_price, qty } — qty en UNIDADES
 let session = null;       // { id, nombre, pin }
 let clienteSel = null;    // fila de milver_clientes elegida en el carrito
 let searchTerm = "";
@@ -373,7 +373,7 @@ function getFilteredArticles() {
  ***********************/
 function qtyOf(cod) {
   const line = cart.find((i) => i.cod === String(cod));
-  return line ? line.qtyCajas : 0;
+  return line ? line.qty : 0;
 }
 
 function variantRowHtml(v) {
@@ -384,10 +384,10 @@ function variantRowHtml(v) {
       <span class="mv-var-cod">${v.cod}</span>
       <span class="mv-var-name">${compra ? '<span class="mv-star" title="Este cliente compra esta variante">★</span> ' : ""}${v.variante || v.descripcion}</span>
       <span class="mv-var-qty">
-        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', -1)" aria-label="Restar 1 caja">−</button>
+        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', -1)" aria-label="Restar 1 unidad">−</button>
         <input class="mv-qty-input" id="qty-${v.cod}" type="number" min="0" value="${qty}"
-               onchange="setQty('${v.cod}', this.value)" aria-label="Cajas" />
-        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', 1)" aria-label="Sumar 1 caja">+</button>
+               onchange="setQty('${v.cod}', this.value)" aria-label="Unidades" />
+        <button type="button" class="mv-step" onclick="changeQty('${v.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
       </span>
     </div>
   `;
@@ -404,7 +404,7 @@ function buildCard(a) {
   const priceHtml = `
     <div class="card-prices">
       <div class="card-price-line">
-        Precio Lista: <strong>$${formatMoney(a.list_price)}</strong><span class="card-iva"> + IVA</span>
+        Precio x unidad: <strong>$${formatMoney(a.list_price)}</strong><span class="card-iva"> + IVA</span>
       </div>
     </div>
   `;
@@ -415,7 +415,6 @@ function buildCard(a) {
         <div class="card-top">
           <div class="card-row">
             <div class="card-cod">Cods: <span>${a.variantes[0].cod}–${a.variantes[a.variantes.length - 1].cod}</span></div>
-            <div class="card-uxb">UxB: <span>${a.uxb}</span></div>
           </div>
           <div class="card-desc">${a.descripcion}</div>
           <div class="mv-var-badge">${a.variantes.length} variantes</div>
@@ -435,15 +434,14 @@ function buildCard(a) {
       <div class="card-top">
         <div class="card-row">
           <div class="card-cod">Cod: <span>${p.cod}</span></div>
-          <div class="card-uxb">UxB: <span>${p.uxb}</span></div>
         </div>
         <div class="card-desc">${p.descripcion}</div>
         ${priceHtml}
         <div class="mv-var-qty mv-simple-qty">
-          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', -1)" aria-label="Restar 1 caja">−</button>
+          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', -1)" aria-label="Restar 1 unidad">−</button>
           <input class="mv-qty-input" id="qty-${p.cod}" type="number" min="0" value="${qty}"
-                 onchange="setQty('${p.cod}', this.value)" aria-label="Cajas" />
-          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', 1)" aria-label="Sumar 1 caja">+</button>
+                 onchange="setQty('${p.cod}', this.value)" aria-label="Unidades" />
+          <button type="button" class="mv-step" onclick="changeQty('${p.cod}', 1)" aria-label="Sumar 1 unidad">+</button>
         </div>
       </div>
     </div>
@@ -497,7 +495,7 @@ function setQty(cod, value) {
   if (qty === 0) {
     if (idx >= 0) cart.splice(idx, 1);
   } else if (idx >= 0) {
-    cart[idx].qtyCajas = qty;
+    cart[idx].qty = qty;
   } else {
     const p = findProduct(cod);
     if (!p) return;
@@ -505,9 +503,8 @@ function setQty(cod, value) {
       cod: String(p.cod),
       descripcion: p.descripcion,
       variante: p.variante,
-      uxb: Number(p.uxb),
       list_price: Number(p.list_price),
-      qtyCajas: qty,
+      qty: qty,
     });
   }
   const input = $("qty-" + cod);
@@ -523,7 +520,7 @@ function changeQty(cod, delta) {
 
 function updateCartCount() {
   const el = $("cartCount");
-  if (el) el.textContent = cart.reduce((s, i) => s + i.qtyCajas, 0);
+  if (el) el.textContent = cart.reduce((s, i) => s + i.qty, 0);
 }
 
 function getDtoVol() {
@@ -535,10 +532,9 @@ function cartTotals() {
   let subtotalLista = 0;
   let total = 0;
   for (const i of cart) {
-    const unidades = i.uxb * i.qtyCajas;
     const neto = i.list_price * (1 - dtoVol) * (1 - WEB_ORDER_DISCOUNT);
-    subtotalLista += i.list_price * unidades;
-    total += neto * unidades;
+    subtotalLista += i.list_price * i.qty;
+    total += neto * i.qty;
   }
   return { subtotalLista, total, descuento: subtotalLista - total, dtoVol };
 }
@@ -559,22 +555,21 @@ function renderCart() {
   const dtoVol = getDtoVol();
   box.innerHTML = cart
     .map((i) => {
-      const unidades = i.uxb * i.qtyCajas;
       const neto = i.list_price * (1 - dtoVol) * (1 - WEB_ORDER_DISCOUNT);
       return `
         <div class="mv-cart-line">
           <div class="mv-cart-line-info">
             <span class="mv-cart-cod">${i.cod}</span>
             <span class="mv-cart-desc">${i.descripcion}</span>
-            <span class="mv-cart-meta">UxB ${i.uxb} · ${i.qtyCajas} caja(s) = ${formatMoney(unidades)} u. · $${formatMoney(neto)}/u</span>
+            <span class="mv-cart-meta">${formatMoney(i.qty)} u. × $${formatMoney(neto)}/u</span>
           </div>
           <div class="mv-var-qty">
             <button type="button" class="mv-step" onclick="changeQty('${i.cod}', -1)" aria-label="Restar">−</button>
-            <input class="mv-qty-input" id="qty-${i.cod}" type="number" min="0" value="${i.qtyCajas}"
-                   onchange="setQty('${i.cod}', this.value)" aria-label="Cajas" />
+            <input class="mv-qty-input" id="qty-${i.cod}" type="number" min="0" value="${i.qty}"
+                   onchange="setQty('${i.cod}', this.value)" aria-label="Unidades" />
             <button type="button" class="mv-step" onclick="changeQty('${i.cod}', 1)" aria-label="Sumar">+</button>
           </div>
-          <div class="mv-cart-line-sub">$${formatMoney(neto * unidades)}</div>
+          <div class="mv-cart-line-sub">$${formatMoney(neto * i.qty)}</div>
         </div>
       `;
     })
@@ -614,7 +609,7 @@ async function submitOrder() {
     p_cliente_cod: clienteSel.cod,
     p_metodo_pago: $("mvPaymentSelect")?.value || "Contado",
     p_observaciones: ($("obsInput")?.value || "").trim() || null,
-    p_items: cart.map((i) => ({ cod: i.cod, cajas: i.qtyCajas })),
+    p_items: cart.map((i) => ({ cod: i.cod, unidades: i.qty })),
   });
   if (btn) {
     btn.disabled = false;
@@ -685,7 +680,7 @@ async function loadHistorial() {
               <div class="mv-hist-item">
                 <span class="mv-cart-cod">${i.cod}</span>
                 <span>${i.descripcion}</span>
-                <span>${i.cajas} cj (${formatMoney(i.unidades)} u.)</span>
+                <span>${formatMoney(i.unidades)} u.</span>
                 <span>$${formatMoney(i.subtotal)}</span>
               </div>`,
               )

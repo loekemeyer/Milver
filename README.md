@@ -102,17 +102,17 @@ importador de listas de súper de LK.
 | Comisionista 4 | 4444 | C301–C400 |
 | Comisionista 5 | 5555 | C401–C500 |
 
-## Lógica de precios (igual que LK)
+## Lógica de precios
 
-`list_price` es **por unidad**; la cantidad se carga en **cajas** (`uxb`
-unidades por caja). Neto por unidad:
+**Milver vende POR UNIDAD** (a diferencia de LK, que vende por caja): el
+comisionista carga unidades y `list_price` es el precio por unidad. Neto:
 
 ```
 neto = list_price × (1 − dto_vol del cliente) × (1 − web_order_discount)
 ```
 
 El servidor recalcula todo en `milver_submit_order` — el navegador solo manda
-`[{cod, cajas}]`.
+`[{cod, unidades}]`.
 
 ## Correr local
 
