@@ -556,54 +556,66 @@ function tapAdd(cod) {
  * SELECTOR DE CANTIDAD (modal al tocar el artículo/variante)
  ***********************/
 let _qtyPickerCod = null;
+let _qtyBuffer = "";
+
+function _qtyRender() {
+  const d = $("qtyModalDisplay");
+  if (d) d.textContent = _qtyBuffer === "" ? "0" : _qtyBuffer;
+}
 
 function abrirQtyPicker(cod) {
   if (!session) return;
   const p = findProduct(cod);
   if (!p) return;
   _qtyPickerCod = String(cod);
-  const modal = $("qtyModal");
+  const actual = qtyOf(cod);
+  _qtyBuffer = actual > 0 ? String(actual) : "";
   const tit = $("qtyModalTitulo");
   const precio = $("qtyModalPrecio");
-  const inp = $("qtyModalInput");
   if (tit) tit.textContent = p.descripcion;
   if (precio) {
     const dtoVol = getDtoVol();
     const neto = Number(p.list_price) * (1 - dtoVol) * (1 - WEB_ORDER_DISCOUNT);
     precio.textContent = `Cod ${p.cod} · $${formatMoney(neto)} x unidad + IVA`;
   }
-  const actual = qtyOf(cod);
-  if (inp) {
-    inp.value = actual > 0 ? actual : "";
-    // Seleccionar todo apenas se enfoca o se toca: así, aunque el dedo caiga
-    // sobre el margen izquierdo del campo, el primer dígito REEMPLAZA en vez
-    // de anteponerse al valor (evita "05" o "50" por error de tipeo).
-    inp.onfocus = () => inp.select();
-    inp.onpointerup = (e) => { e.preventDefault(); inp.select(); };
-  }
+  _qtyRender();
+  const modal = $("qtyModal");
   if (modal) modal.style.display = "";
-  if (inp) {
-    inp.focus();
-    inp.select();
-  }
 }
 
 function cerrarQtyPicker() {
   const modal = $("qtyModal");
   if (modal) modal.style.display = "none";
   _qtyPickerCod = null;
+  _qtyBuffer = "";
+}
+
+// Teclado propio: cada dígito se agrega al número (tope 6 cifras).
+function qtyTecla(d) {
+  if (_qtyBuffer === "0") _qtyBuffer = "";
+  if (_qtyBuffer.length >= 6) return;
+  _qtyBuffer += d;
+  _qtyRender();
+}
+
+function qtyBorrar() {
+  _qtyBuffer = _qtyBuffer.slice(0, -1);
+  _qtyRender();
+}
+
+function qtyBorrarTodo() {
+  _qtyBuffer = "";
+  _qtyRender();
 }
 
 function qtySumar(n) {
-  const inp = $("qtyModalInput");
-  if (!inp) return;
-  inp.value = Math.max(0, (parseInt(inp.value, 10) || 0) + n);
+  _qtyBuffer = String((parseInt(_qtyBuffer, 10) || 0) + n);
+  _qtyRender();
 }
 
 function qtyConfirmar() {
   if (!_qtyPickerCod) return;
-  const inp = $("qtyModalInput");
-  const qty = Math.max(0, parseInt(inp?.value, 10) || 0);
+  const qty = Math.max(0, parseInt(_qtyBuffer, 10) || 0);
   setQty(_qtyPickerCod, qty);
   cerrarQtyPicker();
 }
@@ -970,13 +982,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "Enter") doLogin();
     });
   }
-  const qtyInp = $("qtyModalInput");
-  if (qtyInp) {
-    qtyInp.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") qtyConfirmar();
-      if (e.key === "Escape") cerrarQtyPicker();
-    });
-  }
 });
 
 /***********************
@@ -997,6 +1002,9 @@ window.tapAdd = tapAdd;
 window.abrirQtyPicker = abrirQtyPicker;
 window.cerrarQtyPicker = cerrarQtyPicker;
 window.qtySumar = qtySumar;
+window.qtyTecla = qtyTecla;
+window.qtyBorrar = qtyBorrar;
+window.qtyBorrarTodo = qtyBorrarTodo;
 window.qtyConfirmar = qtyConfirmar;
 window.qtyQuitar = qtyQuitar;
 window.setQty = setQty;

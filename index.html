@@ -10,8 +10,8 @@
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
-    <link rel="stylesheet" href="css/styles.css?v=13" />
-    <link rel="stylesheet" href="css/milver.css?v=13" />
+    <link rel="stylesheet" href="css/styles.css?v=14" />
+    <link rel="stylesheet" href="css/milver.css?v=14" />
   </head>
 
   <body>
@@ -204,17 +204,32 @@
       </section>
     </main>
 
-    <!-- Selector de cantidad: se abre al tocar un artículo/variante -->
+    <!-- Selector de cantidad: teclado numérico PROPIO (no usa el del sistema,
+         así no queda tapado por el teclado de iOS) -->
     <div id="qtyModal" class="mv-qtymodal" style="display:none" onclick="if(event.target===this)cerrarQtyPicker()">
       <div class="mv-qtymodal-card">
         <div id="qtyModalTitulo" class="mv-qtymodal-titulo"></div>
         <div id="qtyModalPrecio" class="mv-qtymodal-precio"></div>
-        <input id="qtyModalInput" class="mv-qtymodal-input" type="number" min="0" inputmode="numeric" placeholder="0" />
+        <div id="qtyModalDisplay" class="mv-qtymodal-display">0</div>
         <div class="mv-qtymodal-quick">
           <button type="button" onclick="qtySumar(1)">+1</button>
           <button type="button" onclick="qtySumar(6)">+6</button>
           <button type="button" onclick="qtySumar(12)">+12</button>
           <button type="button" onclick="qtySumar(24)">+24</button>
+        </div>
+        <div class="mv-teclado">
+          <button type="button" onclick="qtyTecla('1')">1</button>
+          <button type="button" onclick="qtyTecla('2')">2</button>
+          <button type="button" onclick="qtyTecla('3')">3</button>
+          <button type="button" onclick="qtyTecla('4')">4</button>
+          <button type="button" onclick="qtyTecla('5')">5</button>
+          <button type="button" onclick="qtyTecla('6')">6</button>
+          <button type="button" onclick="qtyTecla('7')">7</button>
+          <button type="button" onclick="qtyTecla('8')">8</button>
+          <button type="button" onclick="qtyTecla('9')">9</button>
+          <button type="button" class="mv-tecla-c" onclick="qtyBorrarTodo()">C</button>
+          <button type="button" onclick="qtyTecla('0')">0</button>
+          <button type="button" class="mv-tecla-del" onclick="qtyBorrar()">⌫</button>
         </div>
         <div class="mv-qtymodal-acciones">
           <button type="button" class="mv-btn mv-qtymodal-quitar" onclick="qtyQuitar()">Quitar</button>
@@ -231,8 +246,8 @@
       <span class="mv-cartbar-btn">Ver pedido →</span>
     </button>
 
-    <script src="version.js?v=13"></script>
+    <script src="version.js?v=14"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=13"></script>
+    <script src="script.js?v=14"></script>
   </body>
 </html>
