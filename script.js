@@ -749,7 +749,23 @@ async function submitOrder() {
     alert(data?.error || "Error enviando el pedido. Probá de nuevo.");
     return;
   }
-  lastConfirmedOrder = data;
+  // Snapshot completo para el PDF/impresión (el RPC devuelve solo el resumen)
+  const dtoVol = getDtoVol();
+  lastConfirmedOrder = {
+    numero: data.numero,
+    fecha: new Date().toISOString(),
+    comisionista: session.nombre,
+    cliente: data.cliente,
+    cliente_cod: clienteSel.cod,
+    metodo_pago: $("mvPaymentSelect")?.value || "Contado",
+    observaciones: ($("obsInput")?.value || "").trim() || null,
+    total: data.total,
+    items: cart.map((i) => {
+      const neto = i.list_price * (1 - dtoVol) * (1 - WEB_ORDER_DISCOUNT);
+      return { cod: i.cod, descripcion: i.descripcion, variante: i.variante,
+               unidades: i.qty, precio_neto: neto, subtotal: neto * i.qty };
+    }),
+  };
   cart = [];
   updateCartCount();
   const det = $("confirmDetalle");
@@ -757,6 +773,7 @@ async function submitOrder() {
     det.innerHTML = `
       <p>Pedido <strong>#${data.numero}</strong> para <strong>${data.cliente}</strong></p>
       <p class="mv-confirm-total">Total: <strong>$${formatMoney(data.total)} + IVA</strong></p>
+      <button type="button" class="mv-btn mva-btn-sec mv-btn-pdf" onclick="descargarPDFPedido(lastConfirmedOrder)">📄 Descargar PDF del pedido</button>
     `;
   }
   showSection("pedidoConfirmado");
@@ -789,6 +806,106 @@ async function repetirUltimoPedido() {
     if (findProduct(it.cod)) setQty(it.cod, it.unidades);
   }
   renderCart();
+}
+
+/***********************
+ * PDF DEL PEDIDO (jsPDF)
+ ***********************/
+function descargarPDFPedido(o) {
+  if (!o) return;
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("No se pudo cargar el generador de PDF. Reintentá en unos segundos.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210;
+  let y = 16;
+
+  // Encabezado
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(18, 60, 99);
+  doc.text("MILVER", 14, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+  doc.text("Bazar & Gastronomía", 14, y + 5);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(30);
+  doc.text(`Pedido #${o.numero}`, W - 14, y, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+  doc.text(new Date(o.fecha).toLocaleString("es-AR"), W - 14, y + 5, { align: "right" });
+
+  y += 14;
+  doc.setDrawColor(200);
+  doc.line(14, y, W - 14, y);
+  y += 7;
+
+  // Datos
+  doc.setFontSize(10);
+  doc.setTextColor(30);
+  doc.text(`Cliente: ${o.cliente}${o.cliente_cod ? " (" + o.cliente_cod + ")" : ""}`, 14, y);
+  y += 5;
+  doc.text(`Comisionista: ${o.comisionista || "-"}`, 14, y);
+  y += 5;
+  doc.text(`Medio de pago: ${o.metodo_pago || "-"}`, 14, y);
+  y += 8;
+
+  // Tabla de ítems
+  const cols = [
+    { t: "Cód", x: 14, w: 22 },
+    { t: "Descripción", x: 36, w: 96 },
+    { t: "Unid.", x: 138, w: 16, align: "right" },
+    { t: "P. unit.", x: 168, w: 18, align: "right" },
+    { t: "Subtotal", x: W - 14, w: 24, align: "right" },
+  ];
+  doc.setFillColor(18, 60, 99);
+  doc.rect(14, y - 4, W - 28, 7, "F");
+  doc.setTextColor(255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Cód", 16, y);
+  doc.text("Descripción", 38, y);
+  doc.text("Unid.", 154, y, { align: "right" });
+  doc.text("P.unit.", 180, y, { align: "right" });
+  doc.text("Subtotal", W - 16, y, { align: "right" });
+  y += 7;
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(30);
+  for (const it of o.items || []) {
+    if (y > 275) { doc.addPage(); y = 20; }
+    const desc = (it.descripcion || "").slice(0, 58);
+    doc.text(String(it.cod), 16, y);
+    doc.text(desc, 38, y);
+    doc.text(formatMoney(it.unidades), 154, y, { align: "right" });
+    doc.text("$" + formatMoney(it.precio_neto), 180, y, { align: "right" });
+    doc.text("$" + formatMoney(it.subtotal), W - 16, y, { align: "right" });
+    y += 6;
+    doc.setDrawColor(235);
+    doc.line(14, y - 2, W - 14, y - 2);
+  }
+
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(18, 60, 99);
+  doc.text(`TOTAL: $${formatMoney(o.total)} + IVA`, W - 14, y, { align: "right" });
+
+  if (o.observaciones) {
+    y += 9;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(90);
+    doc.text("Observaciones: " + o.observaciones, 14, y, { maxWidth: W - 28 });
+  }
+
+  doc.save(`milver-pedido-${o.numero}.pdf`);
 }
 
 /***********************
@@ -931,6 +1048,7 @@ function renderHistorial(codForzado) {
               )
               .join("")}
             ${o.observaciones ? `<div class="mv-hist-obs">Obs: ${o.observaciones}</div>` : ""}
+            <button type="button" class="mv-btn mva-btn-sec mv-btn-pdf" onclick='descargarPDFPedido(${JSON.stringify(o).replace(/'/g, "&#39;")})'>📄 PDF</button>
           </div>
         </details>
       `;
@@ -1012,3 +1130,4 @@ window.setCliente = setCliente;
 window.toggleSoloSurtido = toggleSoloSurtido;
 window.submitOrder = submitOrder;
 window.nuevoPedido = nuevoPedido;
+window.descargarPDFPedido = descargarPDFPedido;
