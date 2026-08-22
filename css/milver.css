@@ -632,16 +632,11 @@
   }
 }
 
-/* Celular: una card por fila (ancho completo, cómodo para cargar) */
+/* Celular: DOS cards por fila (pedido del usuario). El grid principal
+   define repeat(2) más abajo; acá solo achicamos padding/gaps. */
 @media (max-width: 560px) {
-  .mv-grid {
-    grid-template-columns: 1fr !important;
-    grid-auto-rows: auto !important; /* sin estirar cards a la más alta */
-  }
   .mv-card {
-    min-height: 0 !important; /* LK fija 420px de alto base; sin foto sobra */
-    padding: 10px 12px 50px;
-    gap: 12px;
+    min-height: 0 !important;
   }
   .mv-card .card-desc {
     min-height: 0;
@@ -949,27 +944,22 @@ body.mv-has-cartbar main {
   z-index: 4000;
   background: rgba(10, 25, 40, 0.55);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding: 14px;
 }
 .mv-qtymodal-card {
   background: #fff;
-  border-radius: 18px 18px 0 0;
-  padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 18px;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   width: 100%;
-  max-width: 480px;
+  max-width: 420px;
+  max-height: 92vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   animation: mvSube 0.18s ease;
-}
-@media (min-width: 700px) {
-  .mv-qtymodal {
-    align-items: center;
-  }
-  .mv-qtymodal-card {
-    border-radius: 18px;
-  }
 }
 @keyframes mvSube {
   from { transform: translateY(30px); opacity: 0.6; }
@@ -984,21 +974,37 @@ body.mv-has-cartbar main {
   font-size: 13px;
   color: #666;
 }
-.mv-qtymodal-input {
+.mv-qtymodal-display {
   border: 2px solid #123c63;
   border-radius: 12px;
-  font-size: 28px !important;
-  font-weight: 800;
+  font-size: 34px;
+  font-weight: 900;
   text-align: right;
-  padding: 12px 16px;
-  width: 100%;
+  padding: 10px 18px;
   color: #123c63;
-  -moz-appearance: textfield;
+  background: #f5f9fd;
+  min-height: 30px;
 }
-.mv-qtymodal-input::-webkit-outer-spin-button,
-.mv-qtymodal-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+/* Teclado numérico propio */
+.mv-teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
+.mv-teclado button {
+  border: 1.5px solid #ccd5df;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1c2733;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mv-teclado button:active { transform: scale(0.95); background: #eef4fa; }
+.mv-tecla-c { color: #b3261e !important; }
+.mv-tecla-del { color: #123c63 !important; }
 .mv-qtymodal-quick {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
