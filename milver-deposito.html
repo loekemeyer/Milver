@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=9" />
-    <link rel="stylesheet" href="css/milver-deposito.css?v=9" />
+    <link rel="stylesheet" href="css/milver.css?v=10" />
+    <link rel="stylesheet" href="css/milver-deposito.css?v=10" />
   </head>
 
   <body class="dep-body">
@@ -43,7 +43,7 @@
         <div id="colaLista" class="dep-cola"></div>
       </section>
 
-      <!-- DETALLE + BOTONERA -->
+      <!-- DETALLE + PICKING ítem por ítem -->
       <section id="pantallaPedido" class="dep-pantalla">
         <div class="dep-top-bar">
           <span class="dep-back" onclick="volverACola()">←</span>
@@ -51,29 +51,59 @@
           <span id="pedidoEstado" class="dep-estado"></span>
         </div>
         <div id="pedidoInfo" class="dep-pedido-info"></div>
+
+        <div class="dep-progreso">
+          <div class="dep-progreso-barra"><div id="progBar" class="dep-progreso-fill"></div></div>
+          <div id="progTxt" class="dep-progreso-txt"></div>
+        </div>
+
         <div id="pedidoItems" class="dep-items"></div>
 
-        <div class="botonera-grp">Botonera</div>
-        <div class="row row-3">
-          <div class="box" data-code="EA" id="btnEA" onclick="marcar('EA')">
-            <div class="box-title">▶ EA</div>
-            <div class="box-desc">Empezar armado</div>
-          </div>
-          <div class="box" data-code="TA" id="btnTA" onclick="marcar('TA')">
-            <div class="box-title">✔ TA</div>
-            <div class="box-desc">Armado listo</div>
-          </div>
-          <div class="box" data-code="DES" id="btnDES" onclick="marcar('DES')">
-            <div class="box-title">🚚 DES</div>
-            <div class="box-desc">Despachado</div>
-          </div>
-        </div>
         <div id="marcarResultado" class="dep-resultado"></div>
+
+        <div class="dep-acciones-fin">
+          <button type="button" class="box" data-code="TA" id="btnTA" onclick="finalizar('TA')">
+            <div class="box-title">✔ Pickeado listo</div>
+            <div class="box-desc">cuando juntaste todo</div>
+          </button>
+          <button type="button" class="box" data-code="DES" id="btnDES" onclick="finalizar('DES')">
+            <div class="box-title">🚚 Despachar</div>
+            <div class="box-desc">sale del depósito</div>
+          </button>
+        </div>
       </section>
     </main>
 
-    <script src="version.js?v=9"></script>
+    <!-- Modal: confirmar cantidad juntada de un ítem -->
+    <div id="pickModal" class="mv-qtymodal" style="display:none" onclick="if(event.target===this)cerrarPick()">
+      <div class="mv-qtymodal-card">
+        <div id="pickTitulo" class="mv-qtymodal-titulo"></div>
+        <div id="pickPedido" class="mv-qtymodal-precio"></div>
+        <div id="pickDisplay" class="mv-qtymodal-display">0</div>
+        <div class="mv-teclado">
+          <button type="button" onclick="pickTecla('1')">1</button>
+          <button type="button" onclick="pickTecla('2')">2</button>
+          <button type="button" onclick="pickTecla('3')">3</button>
+          <button type="button" onclick="pickTecla('4')">4</button>
+          <button type="button" onclick="pickTecla('5')">5</button>
+          <button type="button" onclick="pickTecla('6')">6</button>
+          <button type="button" onclick="pickTecla('7')">7</button>
+          <button type="button" onclick="pickTecla('8')">8</button>
+          <button type="button" onclick="pickTecla('9')">9</button>
+          <button type="button" class="mv-tecla-c" onclick="pickBorrarTodo()">C</button>
+          <button type="button" onclick="pickTecla('0')">0</button>
+          <button type="button" class="mv-tecla-del" onclick="pickBorrar()">⌫</button>
+        </div>
+        <div class="dep-pick-acciones">
+          <button type="button" class="mv-btn dep-btn-falta" onclick="pickFaltante()">Sin stock / faltante</button>
+          <button type="button" class="mv-btn mva-btn-sec" onclick="cerrarPick()">Cancelar</button>
+          <button type="button" class="mv-btn mv-btn-primary" onclick="pickConfirmar()">Juntado ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="version.js?v=10"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="milver-deposito.js?v=9"></script>
+    <script src="milver-deposito.js?v=10"></script>
   </body>
 </html>
