@@ -68,7 +68,7 @@ proyecto para no pagar otro. Para identificarlo/transferirlo:
 | `milver_cliente_surtido` | ítems que cada cliente le compra (~40 c/u) |
 | `milver_orders` / `milver_order_items` | pedidos (con `estado` y `costo_unit`) |
 | `milver_order_eventos` | eventos de armado por operario |
-| `milver_settings` | `web_order_discount` (0.02) |
+| `milver_settings` | `web_order_discount` = 0 (Milver no aplica el descuento web de LK) |
 | RPC `milver_login` | login nombre + PIN |
 | RPC `milver_catalogo` | catálogo entero en un jsonb (evita tope 1000 filas) |
 | RPC `milver_clientes_list` | cartera del comisionista (exige PIN) |
@@ -150,7 +150,7 @@ importador de listas de súper de LK.
 comisionista carga unidades y `list_price` es el precio por unidad. Neto:
 
 ```
-neto = list_price × (1 − dto_vol del cliente) × (1 − web_order_discount)
+neto = list_price × (1 − dto_vol del cliente)
 ```
 
 El servidor recalcula todo en `milver_submit_order` — el navegador solo manda

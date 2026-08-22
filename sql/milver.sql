@@ -1014,3 +1014,8 @@ insert into public.milver_settings values ('deposito_pin_hash', extensions.crypt
 -- v7 — estadísticas del comisionista para la pantalla de Inicio
 -- (semana / mes / histórico / top clientes / serie de 8 días).
 -- Definición desplegada en la base; regenerar con pg_get_functiondef milver_stats.
+
+-- v8 — Milver NO aplica el descuento por pedido web de LK: se puso
+-- milver_settings.web_order_discount = '0'. El neto queda
+-- list_price × (1 - dto_vol del cliente).
+update public.milver_settings set valor = '0' where clave = 'web_order_discount';
