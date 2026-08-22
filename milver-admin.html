@@ -5,8 +5,8 @@
     <title>Milver · Administración</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=5" />
-    <link rel="stylesheet" href="css/milver-admin.css?v=5" />
+    <link rel="stylesheet" href="css/milver.css?v=6" />
+    <link rel="stylesheet" href="css/milver-admin.css?v=6" />
   </head>
 
   <body class="mva-body">
@@ -143,7 +143,7 @@
         <div class="mva-box">
           <p class="mva-help">
             Columnas: <code>cliente_cod</code>, <code>item_cod</code>,
-            <code>fecha</code> (opcional, AAAA-MM-DD), <code>cajas</code>.
+            <code>fecha</code> (opcional, AAAA-MM-DD), <code>cantidad</code> (en unidades).
             Al importar, el <strong>surtido</strong> de cada cliente presente en
             el archivo se reconstruye desde sus ventas reales — reemplaza al
             surtido demo. Filas de clientes inexistentes se descartan y se
@@ -161,6 +161,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="milver-admin.js?v=5"></script>
+    <script src="milver-admin.js?v=6"></script>
   </body>
 </html>

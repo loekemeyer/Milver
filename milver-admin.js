@@ -181,7 +181,7 @@ async function loadPedidos() {
             <div class="mv-hist-item">
               <span class="mv-cart-cod">${i.cod}</span>
               <span>${i.descripcion}</span>
-              <span>${i.cajas} cj (${formatMoney(i.unidades)} u.)</span>
+              <span>${formatMoney(i.unidades)} u.</span>
               <span>$${formatMoney(i.subtotal)}</span>
             </div>`,
             )
@@ -218,8 +218,6 @@ function descargarPedidosExcel() {
       Cod: i.cod,
       Descripcion: i.descripcion,
       Variante: i.variante || "",
-      Cajas: i.cajas,
-      UxB: i.uxb,
       Unidades: i.unidades,
       PrecioLista: Number(i.precio_lista || 0),
       PrecioNeto: Number(i.precio_neto || 0),
@@ -575,7 +573,7 @@ async function importarVentas() {
           cliente_cod: String(colVal(f, ["cliente_cod", "cliente", "cod_cliente"])).trim(),
           item_cod: String(colVal(f, ["item_cod", "cod", "articulo", "artículo"])).trim(),
           fecha: String(fecha || "").slice(0, 10),
-          cajas: Number(colVal(f, ["cajas", "bultos", "cantidad"])) || 0,
+          cantidad: Number(colVal(f, ["cantidad", "unidades", "cajas", "bultos"])) || 0,
         };
       })
       .filter((r) => r.cliente_cod && r.item_cod);
@@ -601,8 +599,8 @@ function descargarModeloVentas() {
   XLSX.utils.book_append_sheet(
     wb,
     XLSX.utils.json_to_sheet([
-      { cliente_cod: "C001", item_cod: "1", fecha: "2026-05-10", cajas: 3 },
-      { cliente_cod: "C001", item_cod: "1250", fecha: "2026-06-02", cajas: 1 },
+      { cliente_cod: "C001", item_cod: "1", fecha: "2026-05-10", cantidad: 36 },
+      { cliente_cod: "C001", item_cod: "1250", fecha: "2026-06-02", cantidad: 12 },
     ]),
     "Ventas",
   );

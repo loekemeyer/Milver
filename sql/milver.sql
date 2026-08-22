@@ -858,3 +858,124 @@ returns jsonb language sql security definer set search_path = public stable as $
          '[]'::jsonb)
   from milver_products where activo;
 $$;
+
+-- ============================================================
+-- v5 — venta POR UNIDAD (Milver vende por unidad, no por caja)
+-- El comisionista carga UNIDADES; list_price ya era por unidad.
+-- milver_order_items.cajas queda legada en 0; manda `unidades`.
+-- ============================================================
+
+alter table public.milver_ventas rename column cajas to cantidad;
+
+create or replace function public.milver_submit_order(
+  p_comisionista_id integer, p_pin text, p_cliente_cod text,
+  p_metodo_pago text, p_observaciones text, p_items jsonb
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_nombre text; v_cli record; v_web numeric; v_order_id bigint;
+  v_sub_lista numeric := 0; v_total numeric := 0;
+  it record;
+begin
+  v_nombre := milver_com_nombre(p_comisionista_id, p_pin);
+  if v_nombre is null then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+
+  select cod, razon_social, dto_vol into v_cli from milver_clientes
+   where cod = p_cliente_cod and comisionista_id = p_comisionista_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Cliente inexistente o de otro comisionista');
+  end if;
+
+  if p_items is null or jsonb_array_length(p_items) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Pedido vacío');
+  end if;
+
+  select coalesce(valor::numeric, 0.02) into v_web
+  from milver_settings where clave = 'web_order_discount';
+  v_web := coalesce(v_web, 0.02);
+
+  insert into milver_orders (comisionista_id, comisionista, cliente_cod, cliente_nombre, metodo_pago, observaciones)
+  values (p_comisionista_id, v_nombre, v_cli.cod, v_cli.razon_social, p_metodo_pago, p_observaciones)
+  returning id into v_order_id;
+
+  for it in
+    select p.cod, p.descripcion, p.variante, p.uxb, p.list_price,
+           greatest(1, least(999999, (x->>'unidades')::int)) as unidades
+    from jsonb_array_elements(p_items) x
+    join milver_products p on p.cod = (x->>'cod') and p.activo
+    where coalesce((x->>'unidades')::int, 0) > 0
+  loop
+    declare
+      v_neto numeric := round(it.list_price * (1 - v_cli.dto_vol) * (1 - v_web), 2);
+    begin
+      insert into milver_order_items
+        (order_id, item_cod, descripcion, variante, cajas, uxb, unidades, precio_lista, precio_neto, subtotal)
+      values
+        (v_order_id, it.cod, it.descripcion, it.variante, 0, it.uxb, it.unidades, it.list_price, v_neto, round(v_neto * it.unidades, 2));
+      v_sub_lista := v_sub_lista + it.list_price * it.unidades;
+      v_total := v_total + round(v_neto * it.unidades, 2);
+    end;
+  end loop;
+
+  if v_total = 0 then
+    delete from milver_orders where id = v_order_id;
+    return jsonb_build_object('ok', false, 'error', 'Ningún ítem válido');
+  end if;
+
+  update milver_orders
+     set subtotal_lista = round(v_sub_lista, 2),
+         descuento_total = round(v_sub_lista - v_total, 2),
+         total = v_total
+   where id = v_order_id;
+
+  return jsonb_build_object('ok', true, 'numero', v_order_id, 'total', v_total,
+                            'cliente', v_cli.razon_social);
+end $$;
+
+create or replace function public.milver_admin_import_ventas(p_pin text, p_rows jsonb, p_reemplazar boolean default true)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ins int := 0; v_surt int := 0; v_sin_cliente int := 0;
+begin
+  if not milver_admin_ok(p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Sesión inválida');
+  end if;
+  if p_rows is null or jsonb_array_length(p_rows) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Archivo vacío');
+  end if;
+
+  create temp table _mv_filas on commit drop as
+    select trim(x->>'cliente_cod') as cliente_cod,
+           trim(x->>'item_cod') as item_cod,
+           (nullif(trim(x->>'fecha'), ''))::date as fecha,
+           greatest(0, coalesce((coalesce(x->>'cantidad', x->>'cajas'))::numeric, 0)) as cantidad
+    from jsonb_array_elements(p_rows) x
+    where nullif(trim(x->>'cliente_cod'), '') is not null
+      and nullif(trim(x->>'item_cod'), '') is not null;
+
+  select count(*) into v_sin_cliente from _mv_filas f
+   where not exists (select 1 from milver_clientes c where c.cod = f.cliente_cod);
+  delete from _mv_filas f
+   where not exists (select 1 from milver_clientes c where c.cod = f.cliente_cod);
+
+  if p_reemplazar then
+    delete from milver_ventas v
+     where v.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  end if;
+
+  insert into milver_ventas (cliente_cod, item_cod, fecha, cantidad)
+  select cliente_cod, item_cod, fecha, cantidad from _mv_filas;
+  get diagnostics v_ins = row_count;
+
+  delete from milver_cliente_surtido s
+   where s.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  insert into milver_cliente_surtido (cliente_cod, item_cod)
+  select distinct v.cliente_cod, v.item_cod
+  from milver_ventas v
+  join milver_products p on p.cod = v.item_cod
+  where v.cliente_cod in (select distinct cliente_cod from _mv_filas);
+  get diagnostics v_surt = row_count;
+
+  return jsonb_build_object('ok', true, 'ventas_insertadas', v_ins,
+                            'surtido_filas', v_surt, 'filas_sin_cliente', v_sin_cliente);
+end $$;
