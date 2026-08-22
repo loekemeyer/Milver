@@ -17,6 +17,10 @@ let pedidos = [];
 let clientes = [];
 let comisionistas = [];
 let clientesSel = new Set(); // cods tildados para asignación de cartera
+let gananciasData = null; // último resultado de milver_admin_ganancias (para Excel)
+let comparativoData = null; // último comparativo por comisionista
+let rankingData = null; // último ranking de productos
+let prodBuscarTimer = null; // debounce del buscador de productos
 
 const $ = (id) => document.getElementById(id);
 
@@ -92,6 +96,7 @@ function showTab(id) {
   if (id === "clientes") loadClientes();
   if (id === "comisionistas") loadStats(true);
   if (id === "ganancias") loadGanancias();
+  if (id === "analisis") loadAnalisis();
 }
 
 function initData() {
@@ -572,6 +577,7 @@ async function loadGanancias() {
     if (cards) cards.innerHTML = `<div class="mva-error">${r.error}</div>`;
     return;
   }
+  gananciasData = r;
   const dias = r.dias || [];
   const pedidos = r.pedidos || [];
   const hoyStr = new Date().toISOString().slice(0, 10);
@@ -663,6 +669,248 @@ function descargarModeloVentas() {
   XLSX.writeFile(wb, "milver-modelo-ventas.xlsx");
 }
 
+function descargarGananciasExcel() {
+  if (!gananciasData) {
+    alert("Cargá el período primero.");
+    return;
+  }
+  const dias = (gananciasData.dias || []).map((d) => ({
+    Fecha: d.fecha,
+    Pedidos: Number(d.pedidos || 0),
+    Venta: Number(d.venta || 0),
+    Costo: Number(d.costo || 0),
+    Ganancia: Number(d.ganancia || 0),
+    "Margen %": d.venta > 0 ? Math.round((d.ganancia / d.venta) * 100) : 0,
+  }));
+  const peds = (gananciasData.pedidos || []).map((p) => ({
+    Numero: p.numero,
+    Fecha: new Date(p.fecha).toLocaleString("es-AR"),
+    Comisionista: p.comisionista,
+    Cliente: p.cliente,
+    Estado: ESTADO_LABEL[p.estado] || p.estado,
+    Venta: Number(p.venta || 0),
+    Costo: Number(p.costo || 0),
+    Ganancia: Number(p.ganancia || 0),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dias), "Por dia");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(peds), "Por pedido");
+  const hoy = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `milver-ganancias-${hoy}.xlsx`);
+}
+
+/***********************
+ * ANÁLISIS (ranking de productos + comparativo por comisionista)
+ ***********************/
+async function loadAnalisis() {
+  if (!adminPin) return;
+  const compBox = $("anaComparativo");
+  const rankBox = $("anaRanking");
+  if (compBox) compBox.innerHTML = "Cargando…";
+  if (rankBox) rankBox.innerHTML = "Cargando…";
+  const desde = $("anaDesde")?.value || null;
+  const hasta = $("anaHasta")?.value || null;
+  const [comp, rank] = await Promise.all([
+    rpc("milver_admin_comparativo", { p_pin: adminPin, p_desde: desde, p_hasta: hasta }),
+    rpc("milver_admin_ranking_productos", { p_pin: adminPin, p_desde: desde, p_hasta: hasta, p_limit: 50 }),
+  ]);
+  comparativoData = comp.ok ? comp.comisionistas || [] : [];
+  rankingData = rank.ok ? rank.productos || [] : [];
+  renderComparativo(compBox, comp);
+  renderRanking(rankBox, rank);
+}
+
+function renderComparativo(box, r) {
+  if (!box) return;
+  if (!r.ok) {
+    box.innerHTML = `<div class="mva-error">${r.error}</div>`;
+    return;
+  }
+  const list = r.comisionistas || [];
+  if (!list.length) {
+    box.innerHTML = "Sin comisionistas.";
+    return;
+  }
+  const tot = list.reduce(
+    (a, c) => ({
+      pedidos: a.pedidos + Number(c.pedidos),
+      clientes: a.clientes + Number(c.clientes),
+      venta: a.venta + Number(c.venta),
+      ganancia: a.ganancia + Number(c.ganancia),
+    }),
+    { pedidos: 0, clientes: 0, venta: 0, ganancia: 0 },
+  );
+  box.innerHTML =
+    `<table class="mva-table"><thead><tr>
+       <th>Comisionista</th><th>Pedidos</th><th>Clientes</th><th>Venta</th>
+       <th>Ganancia</th><th>Margen</th><th>Ticket prom.</th>
+     </tr></thead><tbody>` +
+    list
+      .map(
+        (c) => `<tr>
+        <td>${c.nombre}${c.activo ? "" : " <span class='mva-help'>(inactivo)</span>"}</td>
+        <td>${c.pedidos}</td>
+        <td>${c.clientes}</td>
+        <td>$${formatMoney(c.venta)}</td>
+        <td><strong>$${formatMoney(c.ganancia)}</strong></td>
+        <td>${c.venta > 0 ? Math.round((c.ganancia / c.venta) * 100) + "%" : "—"}</td>
+        <td>$${formatMoney(c.ticket)}</td>
+      </tr>`,
+      )
+      .join("") +
+    `<tr class="mva-total-row">
+       <td><strong>Total</strong></td><td>${tot.pedidos}</td><td>${tot.clientes}</td>
+       <td>$${formatMoney(tot.venta)}</td><td><strong>$${formatMoney(tot.ganancia)}</strong></td>
+       <td>${tot.venta > 0 ? Math.round((tot.ganancia / tot.venta) * 100) + "%" : "—"}</td><td></td>
+     </tr>` +
+    "</tbody></table>";
+}
+
+function renderRanking(box, r) {
+  if (!box) return;
+  if (!r.ok) {
+    box.innerHTML = `<div class="mva-error">${r.error}</div>`;
+    return;
+  }
+  const list = r.productos || [];
+  if (!list.length) {
+    box.innerHTML = "Sin pedidos en el período.";
+    return;
+  }
+  box.innerHTML =
+    `<table class="mva-table"><thead><tr>
+       <th>#</th><th>Cod</th><th>Descripción</th><th>Unidades</th>
+       <th>Pedidos</th><th>Venta</th><th>Ganancia</th>
+     </tr></thead><tbody>` +
+    list
+      .map(
+        (p, i) => `<tr>
+        <td>${i + 1}</td>
+        <td>${p.cod}</td>
+        <td>${p.descripcion}${p.variante ? " · " + p.variante : ""}</td>
+        <td><strong>${formatMoney(p.unidades)}</strong></td>
+        <td>${p.pedidos}</td>
+        <td>$${formatMoney(p.venta)}</td>
+        <td>$${formatMoney(p.ganancia)}</td>
+      </tr>`,
+      )
+      .join("") +
+    "</tbody></table>";
+}
+
+function descargarComparativoExcel() {
+  if (!comparativoData || !comparativoData.length) {
+    alert("Cargá el período primero.");
+    return;
+  }
+  const rows = comparativoData.map((c) => ({
+    Comisionista: c.nombre,
+    Activo: c.activo ? "Sí" : "No",
+    Pedidos: Number(c.pedidos || 0),
+    Clientes: Number(c.clientes || 0),
+    Venta: Number(c.venta || 0),
+    Costo: Number(c.costo || 0),
+    Ganancia: Number(c.ganancia || 0),
+    "Margen %": c.venta > 0 ? Math.round((c.ganancia / c.venta) * 100) : 0,
+    "Ticket promedio": Number(c.ticket || 0),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Comparativo");
+  const hoy = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `milver-comparativo-${hoy}.xlsx`);
+}
+
+function descargarRankingExcel() {
+  if (!rankingData || !rankingData.length) {
+    alert("Cargá el período primero.");
+    return;
+  }
+  const rows = rankingData.map((p, i) => ({
+    Puesto: i + 1,
+    Cod: p.cod,
+    Descripcion: p.descripcion,
+    Variante: p.variante || "",
+    Unidades: Number(p.unidades || 0),
+    Pedidos: Number(p.pedidos || 0),
+    Venta: Number(p.venta || 0),
+    Costo: Number(p.costo || 0),
+    Ganancia: Number(p.ganancia || 0),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Ranking");
+  const hoy = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `milver-ranking-productos-${hoy}.xlsx`);
+}
+
+/***********************
+ * EDITAR PRECIO / COSTO DE PRODUCTOS
+ ***********************/
+function buscarProductos() {
+  clearTimeout(prodBuscarTimer);
+  prodBuscarTimer = setTimeout(_buscarProductos, 250);
+}
+
+async function _buscarProductos() {
+  const box = $("prodLista");
+  if (!box || !adminPin) return;
+  const q = ($("prodBuscar")?.value || "").trim();
+  if (!q) {
+    box.innerHTML = "Escribí para buscar un producto.";
+    return;
+  }
+  box.innerHTML = "Buscando…";
+  const r = await rpc("milver_admin_productos", { p_pin: adminPin, p_q: q, p_limit: 100 });
+  if (!r.ok) {
+    box.innerHTML = `<div class="mva-error">${r.error}</div>`;
+    return;
+  }
+  const list = r.productos || [];
+  if (!list.length) {
+    box.innerHTML = "Sin coincidencias.";
+    return;
+  }
+  box.innerHTML =
+    `<div class="mva-help">${list.length} resultado(s)</div>` +
+    `<table class="mva-table"><thead><tr>
+       <th>Cod</th><th>Descripción</th><th>Precio</th><th>Costo</th><th>Margen</th><th></th>
+     </tr></thead><tbody>` +
+    list
+      .map((p) => {
+        const margen = p.list_price > 0 ? Math.round(((p.list_price - p.cost) / p.list_price) * 100) : 0;
+        return `<tr>
+        <td>${p.cod}</td>
+        <td>${p.descripcion}${p.variante ? " · " + p.variante : ""}${p.activo ? "" : " <span class='mva-help'>(inactivo)</span>"}</td>
+        <td><input id="pp-${p.cod}" class="mv-input mva-mini" type="number" step="0.01" value="${p.list_price}"></td>
+        <td><input id="pc-${p.cod}" class="mv-input mva-mini" type="number" step="0.01" value="${p.cost}"></td>
+        <td id="pm-${p.cod}">${margen}%</td>
+        <td><button type="button" class="mva-mini-btn" onclick="guardarPrecio('${p.cod}')">Guardar</button></td>
+      </tr>`;
+      })
+      .join("") +
+    "</tbody></table>";
+}
+
+async function guardarPrecio(cod) {
+  const precio = Number($(`pp-${cod}`)?.value);
+  const costo = Number($(`pc-${cod}`)?.value);
+  if (!(precio >= 0) || !(costo >= 0)) {
+    alert("Precio y costo deben ser números válidos.");
+    return;
+  }
+  const r = await rpc("milver_admin_set_precio", {
+    p_pin: adminPin,
+    p_cod: cod,
+    p_list_price: precio,
+    p_cost: costo,
+  });
+  if (!r.ok) {
+    alert("✗ " + r.error);
+    return;
+  }
+  const mgCell = $(`pm-${cod}`);
+  if (mgCell) mgCell.textContent = (precio > 0 ? Math.round(((precio - costo) / precio) * 100) : 0) + "% ✓";
+}
+
 /***********************
  * INIT + EXPORTS
  ***********************/
@@ -695,3 +943,9 @@ window.altaComisionista = altaComisionista;
 window.importarVentas = importarVentas;
 window.loadGanancias = loadGanancias;
 window.descargarModeloVentas = descargarModeloVentas;
+window.descargarGananciasExcel = descargarGananciasExcel;
+window.loadAnalisis = loadAnalisis;
+window.descargarComparativoExcel = descargarComparativoExcel;
+window.descargarRankingExcel = descargarRankingExcel;
+window.buscarProductos = buscarProductos;
+window.guardarPrecio = guardarPrecio;

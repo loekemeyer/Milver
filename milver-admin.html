@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=9" />
-    <link rel="stylesheet" href="css/milver-admin.css?v=9" />
+    <link rel="stylesheet" href="css/milver.css?v=10" />
+    <link rel="stylesheet" href="css/milver-admin.css?v=10" />
   </head>
 
   <body class="mva-body">
@@ -34,6 +34,7 @@
         <button type="button" class="mva-tab" data-tab="comisionistas" onclick="showTab('comisionistas')">Comisionistas</button>
         <button type="button" class="mva-tab" data-tab="ventas" onclick="showTab('ventas')">Ventas</button>
         <button type="button" class="mva-tab" data-tab="ganancias" onclick="showTab('ganancias')">Ganancias</button>
+        <button type="button" class="mva-tab" data-tab="analisis" onclick="showTab('analisis')">Análisis</button>
       </nav>
       <div class="mva-header-right">
         <a class="mva-link" href="index.html">← Portal</a>
@@ -86,6 +87,14 @@
           </div>
           <div id="catalogoResultado" class="mva-resultado"></div>
         </div>
+
+        <div class="mva-bar">
+          <h2 class="mv-h2">Editar precio / costo</h2>
+          <div class="mva-bar-right">
+            <input id="prodBuscar" class="mv-input mva-buscar" type="search" placeholder="Buscar por código o descripción…" oninput="buscarProductos()" />
+          </div>
+        </div>
+        <div id="prodLista" class="mva-box">Escribí para buscar un producto.</div>
       </section>
 
       <!-- CLIENTES -->
@@ -169,6 +178,7 @@
             <input id="ganDesde" class="mv-input mva-fecha" type="date" onchange="loadGanancias()" />
             <label class="mv-label" for="ganHasta">Hasta</label>
             <input id="ganHasta" class="mv-input mva-fecha" type="date" onchange="loadGanancias()" />
+            <button type="button" class="mv-btn mv-btn-primary" onclick="descargarGananciasExcel()">⬇ Descargar Excel</button>
           </div>
         </div>
         <div id="ganCards" class="mva-cards"></div>
@@ -181,10 +191,39 @@
           <div id="ganPedidos"></div>
         </div>
       </section>
+
+      <!-- ANÁLISIS (ranking de productos + comparativo por comisionista) -->
+      <section id="tab-analisis" class="mva-section">
+        <div class="mva-bar">
+          <h2 class="mv-h2">Análisis</h2>
+          <div class="mva-bar-right">
+            <label class="mv-label" for="anaDesde">Desde</label>
+            <input id="anaDesde" class="mv-input mva-fecha" type="date" onchange="loadAnalisis()" />
+            <label class="mv-label" for="anaHasta">Hasta</label>
+            <input id="anaHasta" class="mv-input mva-fecha" type="date" onchange="loadAnalisis()" />
+          </div>
+        </div>
+
+        <div class="mva-box">
+          <div class="mva-bar">
+            <h3>Comparativo por comisionista</h3>
+            <button type="button" class="mv-btn mva-btn-sec" onclick="descargarComparativoExcel()">⬇ Excel</button>
+          </div>
+          <div id="anaComparativo"></div>
+        </div>
+
+        <div class="mva-box">
+          <div class="mva-bar">
+            <h3>Productos más pedidos</h3>
+            <button type="button" class="mv-btn mva-btn-sec" onclick="descargarRankingExcel()">⬇ Excel</button>
+          </div>
+          <div id="anaRanking"></div>
+        </div>
+      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="milver-admin.js?v=9"></script>
+    <script src="milver-admin.js?v=10"></script>
   </body>
 </html>
