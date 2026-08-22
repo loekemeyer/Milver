@@ -1,2 +1,2 @@
 // Versión visible del portal Milver. Bump manual en cada deploy.
-const MILVER_VERSION = "1.10.1";
+const MILVER_VERSION = "1.11.0";

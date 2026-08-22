@@ -1342,3 +1342,31 @@ body.mv-has-cartbar main {
   touch-action: manipulation;
 }
 .mv-hist-items .mv-btn-pdf { margin-top: 8px; }
+
+/* Editar / anular pedido (v1.11) */
+.mv-edit-banner {
+  margin: 6px 24px 0;
+  background: #fff7e0;
+  border: 1px solid #f0d47a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #7a5b00;
+}
+.mv-hist-acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.mv-hist-acciones .mv-btn { margin-top: 0; width: auto; flex: 1; min-width: 90px; }
+.mv-btn-anular { background: #fdecea; color: #b3261e; }
+.mv-hist-estado {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+  background: #dcfce7;
+  border-radius: 8px;
+  padding: 6px 10px;
+  align-self: center;
+}
