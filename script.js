@@ -1078,6 +1078,31 @@ async function loadInicio() {
     if (statsBox) statsBox.innerHTML = '<div class="mv-cart-empty">No se pudieron cargar las estadísticas.</div>';
     return;
   }
+  // aviso de faltantes marcados por el depósito (últimos 30 días)
+  const faltaBox = $("inicioFaltantes");
+  if (faltaBox) {
+    const falt = data.faltantes || [];
+    if (!falt.length) {
+      faltaBox.style.display = "none";
+      faltaBox.innerHTML = "";
+    } else {
+      faltaBox.style.display = "";
+      faltaBox.innerHTML =
+        `<div class="mv-falta-tit">⚠ ${falt.length} pedido${falt.length > 1 ? "s" : ""} con faltantes del depósito</div>` +
+        falt
+          .slice(0, 5)
+          .map(
+            (f) =>
+              `<button type="button" class="mv-falta-row" onclick="verPedidoFaltante('${f.numero}')">
+                 <span class="mv-falta-num">#${f.numero}</span>
+                 <span class="mv-falta-cli">${f.cliente}</span>
+                 <span class="mv-falta-items">${f.items} ítem${Number(f.items) > 1 ? "s" : ""}</span>
+               </button>`,
+          )
+          .join("") +
+        (falt.length > 5 ? `<div class="mv-falta-mas">y ${falt.length - 5} más — vé al Historial</div>` : "");
+    }
+  }
   const sem = data.semana || {}, mes = data.mes || {}, tot = data.total || {};
   if (statsBox) {
     statsBox.innerHTML = [
@@ -1160,6 +1185,40 @@ function filtrarHistCliente(cod) {
   renderHistorial(cod);
 }
 
+// Desde el aviso de faltantes del Inicio: ir al historial y abrir ese pedido.
+async function verPedidoFaltante(numero) {
+  showSection("historial");
+  if (!_histPedidos.length) await loadHistorial();
+  const sel = $("histCliente");
+  if (sel) sel.value = "";
+  const inp = $("histBuscar");
+  if (inp) inp.value = String(numero);
+  renderHistorial("");
+  // abrir el <details> del pedido
+  setTimeout(() => {
+    const cards = document.querySelectorAll("#historialLista .mv-hist-card");
+    for (const c of cards) {
+      if (c.querySelector(".mv-hist-num")?.textContent === "#" + numero) {
+        c.open = true;
+        c.scrollIntoView({ behavior: "smooth", block: "center" });
+        break;
+      }
+    }
+  }, 60);
+}
+
+const MV_ESTADOS = {
+  nuevo: "Nuevo",
+  en_picking: "En preparación",
+  pickeado: "Preparado",
+  en_armado: "En preparación",
+  armado: "Preparado",
+  despachado: "Despachado",
+};
+function estadoLabel(e) {
+  return MV_ESTADOS[e] || "En depósito";
+}
+
 function renderHistorial(codForzado) {
   const box = $("historialLista");
   if (!box) return;
@@ -1178,25 +1237,34 @@ function renderHistorial(codForzado) {
         dateStyle: "short",
         timeStyle: "short",
       });
+      const nFalta = Number(o.faltantes || 0);
       return `
-        <details class="mv-hist-card">
+        <details class="mv-hist-card${nFalta ? " mv-hist-card-falta" : ""}">
           <summary>
             <span class="mv-hist-num">#${o.numero}</span>
             <span class="mv-hist-cliente">${o.cliente}</span>
             <span class="mv-hist-fecha">${fecha}</span>
+            ${nFalta ? `<span class="mv-hist-badge-falta">⚠ ${nFalta} faltante${nFalta > 1 ? "s" : ""}</span>` : `<span class="mv-hist-estado-mini">${estadoLabel(o.estado)}</span>`}
             <span class="mv-hist-total">$${formatMoney(o.total)}</span>
           </summary>
           <div class="mv-hist-items">
+            ${nFalta ? `<div class="mv-hist-alerta">⚠ El depósito marcó ${nFalta} ítem${nFalta > 1 ? "s" : ""} con faltante o entregado incompleto. Revisá el detalle con el cliente.</div>` : ""}
             ${(o.items || [])
-              .map(
-                (i) => `
-              <div class="mv-hist-item">
+              .map((i) => {
+                const faltan = Number(i.faltan || 0);
+                const marca = i.pick_falta
+                  ? `<span class="mv-item-falta">Sin stock</span>`
+                  : faltan > 0
+                    ? `<span class="mv-item-falta">Faltan ${formatMoney(faltan)} u.</span>`
+                    : "";
+                return `
+              <div class="mv-hist-item${faltan > 0 || i.pick_falta ? " mv-hist-item-falta" : ""}">
                 <span class="mv-cart-cod">${i.cod}</span>
-                <span>${i.descripcion}</span>
+                <span>${i.descripcion}${marca ? " " + marca : ""}</span>
                 <span>${formatMoney(i.unidades)} u.</span>
                 <span>$${formatMoney(i.subtotal)}</span>
-              </div>`,
-              )
+              </div>`;
+              })
               .join("")}
             ${o.observaciones ? `<div class="mv-hist-obs">Obs: ${o.observaciones}</div>` : ""}
             <div class="mv-hist-acciones">
@@ -1204,7 +1272,7 @@ function renderHistorial(codForzado) {
               ${(o.estado === "nuevo" || !o.estado)
                 ? `<button type="button" class="mv-btn mva-btn-sec" onclick="editarPedido(${o.numero})">✎ Editar</button>
                    <button type="button" class="mv-btn mv-btn-anular" onclick="anularPedido(${o.numero})">🗑 Anular</button>`
-                : `<span class="mv-hist-estado">En depósito</span>`}
+                : `<span class="mv-hist-estado">${estadoLabel(o.estado)}</span>`}
             </div>
           </div>
         </details>
@@ -1289,6 +1357,7 @@ window.cancelarEdicion = cancelarEdicion;
 window.loadInicio = loadInicio;
 window.renderHistorial = renderHistorial;
 window.filtrarHistCliente = filtrarHistCliente;
+window.verPedidoFaltante = verPedidoFaltante;
 window.setSortMode = setSortMode;
 window.changeQty = changeQty;
 window.tapAdd = tapAdd;
