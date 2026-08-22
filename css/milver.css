@@ -472,3 +472,166 @@
   color: #1a7f37;
   font-weight: 900;
 }
+
+/* ============================================================
+   MOBILE (≤900px) — LK esconde .nav-center/.nav-right en mobile
+   porque usa hamburguesa + barra propia que Milver no tiene.
+   Acá se rearma el header para celular: logo + salir arriba,
+   buscador full-width, botonera debajo. El header pasa a sticky
+   con alto automático (el fixed de 86px + padding-top del body
+   tapaba el toolbar).
+   ============================================================ */
+
+/* Logo: el header de LK es oscuro (#212122); azul oscuro no se lee */
+.header .mv-logo {
+  color: #7db3e8;
+}
+
+@media (max-width: 900px) {
+  body {
+    padding-top: 0 !important;
+  }
+  .header {
+    position: sticky !important;
+    top: 0;
+    height: auto !important;
+    padding: 10px 12px !important;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    justify-content: flex-start !important;
+  }
+  .logo {
+    position: static !important;
+    transform: none !important;
+    order: 0;
+  }
+  .header .mv-logo {
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+  /* .nav se disuelve: sus hijos pasan a ser items del flex del header */
+  .nav {
+    display: contents !important;
+  }
+  /* LK lo posiciona absolute (right 40px): volver al flujo del flex */
+  .nav-right {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    order: 1;
+    margin-left: auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-right .nav-link {
+    color: #fff;
+    font-size: 13px;
+    padding: 5px 10px;
+    background: none;
+    border: 1px solid #555;
+    border-radius: 8px;
+  }
+  .mv-user-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-center {
+    display: flex !important;
+    order: 2;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  #navSearch {
+    flex: 1 1 100%;
+    order: -1;
+    width: 100%;
+    max-width: none;
+  }
+  .nav-center .nav-link {
+    color: #fff;
+    font-size: 14px !important;
+    font-weight: 600;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+  .nav-link-cart {
+    margin-left: auto;
+    padding: 6px 12px !important;
+  }
+  .nav-link-cart .cart-link-line1 {
+    display: none; /* "Enviá tu" sobra en celular */
+  }
+  .mv-cart-ico {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+
+  /* Toolbar: selects apilados a lo ancho */
+  .mv-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+  .mv-toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mv-toolbar .mv-select,
+  .mv-toggle {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Controles de cantidad compactos para que el + no se corte */
+  .mv-step {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+  .mv-qty-input {
+    width: 42px;
+    padding: 4px 2px;
+  }
+  .mv-var-row {
+    gap: 6px;
+  }
+  .mv-var-cod {
+    min-width: 26px;
+    font-size: 11px;
+  }
+  .mv-var-qty {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+}
+
+/* Celular: una card por fila (ancho completo, cómodo para cargar) */
+@media (max-width: 560px) {
+  .mv-grid {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important; /* sin estirar cards a la más alta */
+  }
+  .mv-card {
+    min-height: 0 !important; /* LK fija 420px de alto base; sin foto sobra */
+    padding: 10px 12px 50px;
+    gap: 12px;
+  }
+  .mv-card .card-desc {
+    min-height: 0;
+  }
+}
+/* Tablet chica: dos columnas */
+@media (min-width: 561px) and (max-width: 900px) {
+  .mv-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+}
