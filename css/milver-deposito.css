@@ -348,3 +348,17 @@
   color: #b91c1c;
   border: 1.5px solid #fca5a5;
 }
+
+/* Enlace "Volver al portal" en la tarjeta de login del depósito */
+.dep-volver-portal {
+  display: inline-block;
+  margin-top: 4px;
+  text-align: center;
+  color: #123c63;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.dep-volver-portal:hover {
+  text-decoration: underline;
+}
