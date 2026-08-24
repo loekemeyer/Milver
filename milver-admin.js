@@ -37,50 +37,29 @@ async function rpc(fn, args) {
 /***********************
  * LOGIN
  ***********************/
+// El admin entra sin clave: se autentica solo al abrir el panel.
 function restoreSession() {
+  adminPin = "-";
   try {
-    adminPin = sessionStorage.getItem("milver_admin_pin") || null;
-  } catch (e) {
-    adminPin = null;
-  }
-  syncLoginUI();
-  if (adminPin) initData();
-}
-
-function syncLoginUI() {
-  const overlay = $("loginOverlay");
-  if (overlay) overlay.style.display = adminPin ? "none" : "";
-}
-
-async function doLogin() {
-  const pin = ($("loginPin")?.value || "").trim();
-  const errBox = $("loginError");
-  if (!pin) return;
-  const btn = $("loginBtn");
-  if (btn) btn.disabled = true;
-  const r = await rpc("milver_admin_login", { p_pin: pin });
-  if (btn) btn.disabled = false;
-  if (!r.ok) {
-    if (errBox) {
-      errBox.textContent = r.error || "PIN incorrecto";
-      errBox.style.display = "";
-    }
-    return;
-  }
-  adminPin = pin;
-  try {
-    sessionStorage.setItem("milver_admin_pin", pin);
+    sessionStorage.setItem("milver_admin_pin", "-");
   } catch (e) {}
   syncLoginUI();
   initData();
 }
 
+function syncLoginUI() {
+  const overlay = $("loginOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+// Sin clave: no hay login manual. Se mantiene por compatibilidad de onclick.
+async function doLogin() {
+  restoreSession();
+}
+
 function logout() {
-  adminPin = null;
-  try {
-    sessionStorage.removeItem("milver_admin_pin");
-  } catch (e) {}
-  syncLoginUI();
+  // Sin clave no hay sesión que cerrar: se vuelve al portal.
+  location.href = "index.html";
 }
 
 /***********************

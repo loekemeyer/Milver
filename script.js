@@ -108,21 +108,18 @@ let loginRole = "comisionista"; // comisionista | armador | admin
 let _loginListas = { comisionista: null, armador: null }; // cache de nombres
 
 // Cambiar el rol seleccionado en el login: muestra/oculta el desplegable de
-// nombres y ajusta la etiqueta. Admin solo pide PIN.
+// nombres y ajusta la etiqueta. Nadie usa clave: Admin entra directo,
+// Comisionista y Armador solo eligen su nombre.
 function setRole(role) {
   loginRole = role;
   document.querySelectorAll(".mv-role-tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.role === role));
   const field = $("loginNombreField");
-  const pinField = $("loginPinField");
   const label = $("loginNombreLabel");
   const errBox = $("loginError");
   if (errBox) errBox.style.display = "none";
-  const pinInp = $("loginPin");
-  if (pinInp) pinInp.value = "";
-  // Admin: solo PIN. Armador: solo nombre (sin PIN). Comisionista: nombre + PIN.
+  // Admin: sin nombre ni clave. Comisionista/Armador: solo elegir nombre.
   if (field) field.style.display = role === "admin" ? "none" : "";
-  if (pinField) pinField.style.display = role === "armador" ? "none" : "";
   if (role === "admin") return;
   if (label) label.textContent = role === "armador" ? "Operario" : "Comisionista";
   poblarLoginNombres(role);
@@ -155,7 +152,6 @@ function _pintarLoginNombres(sel, lista, role) {
 }
 
 async function doLogin() {
-  const pin = ($("loginPin")?.value || "").trim();
   const errBox = $("loginError");
   const btn = $("loginBtn");
   const falla = (msg) => {
@@ -163,23 +159,18 @@ async function doLogin() {
     if (errBox) { errBox.textContent = msg; errBox.style.display = ""; }
   };
 
-  // --- ADMIN: solo PIN → panel de administración ---
+  // --- ADMIN: sin clave → panel de administración ---
   if (loginRole === "admin") {
-    if (!pin) return falla("Ingresá el PIN.");
     if (btn) btn.disabled = true;
-    const r = await supabaseClient.rpc("milver_admin_login", { p_pin: pin });
-    if (r.data?.ok) {
-      try { sessionStorage.setItem("milver_admin_pin", pin); } catch (e) {}
-      location.href = "milver-admin.html";
-      return;
-    }
-    return falla("PIN de admin incorrecto.");
+    try { sessionStorage.setItem("milver_admin_pin", "-"); } catch (e) {}
+    location.href = "milver-admin.html";
+    return;
   }
 
   const nombre = ($("loginNombre")?.value || "").trim();
   if (!nombre) return falla("Elegí tu nombre de la lista.");
 
-  // --- ARMADOR: solo nombre de operario (sin PIN) → panel de depósito ---
+  // --- ARMADOR: solo nombre de operario (sin clave) → panel de depósito ---
   if (loginRole === "armador") {
     if (btn) btn.disabled = true;
     // La credencial del depósito es el propio nombre del operario.
@@ -195,17 +186,16 @@ async function doLogin() {
     return falla(r.data?.error || "Operario no válido.");
   }
 
-  // --- COMISIONISTA: nombre + PIN → portal ---
-  if (!pin) return falla("Ingresá el PIN.");
+  // --- COMISIONISTA: solo nombre (sin clave) → portal ---
   if (btn) btn.disabled = true;
   const { data, error } = await supabaseClient.rpc("milver_login", {
     p_nombre: nombre,
-    p_pin: pin,
+    p_pin: "",
   });
   if (error || !data?.ok) {
-    return falla(data?.error || "PIN incorrecto o error de conexión.");
+    return falla(data?.error || "Error de conexión.");
   }
-  session = { id: data.id, nombre: data.nombre, pin };
+  session = { id: data.id, nombre: data.nombre, pin: "" };
   try {
     localStorage.setItem("milver_session", JSON.stringify(session));
   } catch (e) {}
@@ -1397,9 +1387,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", () => catMenu.classList.remove("open"));
   }
 
-  const pin = $("loginPin");
-  if (pin) {
-    pin.addEventListener("keydown", (e) => {
+  const nombreSel = $("loginNombre");
+  if (nombreSel) {
+    nombreSel.addEventListener("keydown", (e) => {
       if (e.key === "Enter") doLogin();
     });
   }
