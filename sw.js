@@ -1,13 +1,13 @@
 // Service worker Milver — caché offline del "shell" y del catálogo.
 // Versión del caché: subir con cada deploy para invalidar.
-const CACHE = "milver-v1_18_0";
+const CACHE = "milver-v1_18_1";
 const SHELL = [
   "./",
   "./index.html",
-  "./script.js?v=24",
-  "./version.js?v=24",
-  "./css/styles.css?v=24",
-  "./css/milver.css?v=24",
+  "./script.js?v=25",
+  "./version.js?v=25",
+  "./css/styles.css?v=25",
+  "./css/milver.css?v=25",
   "./img/logo-milver.jpg",
 ];
 
