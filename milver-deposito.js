@@ -11,7 +11,13 @@ const SUPABASE_URL = "https://kwkclwhmoygunqmlegrg.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a2Nsd2htb3lndW5xbWxlZ3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MjA2NzUsImV4cCI6MjA4NTA5NjY3NX0.soqPY5hfA3RkAJ9jmIms8UtEGUc4WpZztpEbmDijOgU";
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Si el CDN de Supabase no cargó, no matamos la página: mostramos aviso + Reintentar.
+let supabaseClient = null;
+try {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+  console.error("Supabase no cargó:", e);
+}
 
 let depPin = null;
 let operario = null;
@@ -51,16 +57,41 @@ function restoreSession() {
 }
 
 // Llenar el desplegable con los operarios activos.
+// A prueba de fallos: si algo falla, muestra aviso + botón Reintentar en vez
+// de quedar en blanco (así el operario nunca queda atrapado sin poder elegir).
 async function poblarOperarios() {
   const sel = $("loginOperario");
   if (!sel) return;
+  const err = $("loginError");
+  const retry = $("reintentarOperarios");
+  const mostrarError = (msg) => {
+    sel.innerHTML = '<option value="">No se pudo cargar</option>';
+    if (err) { err.textContent = msg; err.style.display = ""; }
+    if (retry) retry.style.display = "";
+  };
+
+  if (err) err.style.display = "none";
+  if (retry) retry.style.display = "none";
   sel.innerHTML = "<option>Cargando…</option>";
-  const { data } = await supabaseClient.rpc("milver_operarios_pub");
-  const lista = Array.isArray(data) ? data : [];
-  sel.innerHTML = lista.length
-    ? '<option value="">Elegí tu nombre…</option>' +
-      lista.map((o) => `<option value="${o.nombre}">${o.nombre}</option>`).join("")
-    : '<option value="">Sin operarios cargados</option>';
+
+  if (!supabaseClient) {
+    return mostrarError("No cargó la conexión. Revisá internet y tocá Reintentar.");
+  }
+  try {
+    const { data, error } = await supabaseClient.rpc("milver_operarios_pub");
+    if (error) throw error;
+    const lista = Array.isArray(data) ? data : [];
+    if (!lista.length) {
+      sel.innerHTML = '<option value="">Sin operarios cargados</option>';
+      return;
+    }
+    sel.innerHTML =
+      '<option value="">Elegí tu nombre…</option>' +
+      lista.map((o) => `<option value="${o.nombre}">${o.nombre}</option>`).join("");
+  } catch (e) {
+    console.error("milver_operarios_pub:", e);
+    mostrarError("No se pudo cargar la lista. Tocá Reintentar.");
+  }
 }
 
 function syncLoginUI() {
@@ -337,6 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.doLogin = doLogin;
+window.poblarOperarios = poblarOperarios;
 window.logout = logout;
 window.loadCola = loadCola;
 window.abrirPedido = abrirPedido;

@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=25" />
-    <link rel="stylesheet" href="css/milver-deposito.css?v=25" />
+    <link rel="stylesheet" href="css/milver.css?v=26" />
+    <link rel="stylesheet" href="css/milver-deposito.css?v=26" />
   </head>
 
   <body class="dep-body">
@@ -20,6 +20,8 @@
         <select id="loginOperario" class="mv-select"></select>
         <div id="loginError" class="mv-login-error" style="display:none"></div>
         <button type="button" id="loginBtn" class="mv-btn mv-btn-primary" onclick="doLogin()">Entrar</button>
+        <button type="button" id="reintentarOperarios" class="mv-btn mva-btn-sec" style="display:none" onclick="poblarOperarios()">↻ Reintentar</button>
+        <a class="dep-volver-portal" href="index.html">← Volver al portal</a>
       </div>
     </div>
 
@@ -100,8 +102,8 @@
       </div>
     </div>
 
-    <script src="version.js?v=25"></script>
+    <script src="version.js?v=26"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="milver-deposito.js?v=25"></script>
+    <script src="milver-deposito.js?v=26"></script>
   </body>
 </html>
