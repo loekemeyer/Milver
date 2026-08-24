@@ -30,6 +30,38 @@
   white-space: nowrap;
 }
 
+/* Cluster derecho del header en DESKTOP: chip de usuario + "Salir" prolijos
+   y consistentes (mismo alto y redondeo). En mobile ya se estilan aparte. */
+@media (min-width: 901px) {
+  .nav-right .mv-user-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
+    border-radius: 18px;
+  }
+  .nav-right #logoutBtn.nav-link {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 18px;
+    background: transparent;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .nav-right #logoutBtn.nav-link:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+}
+
 /* ---------- Login ---------- */
 .mv-login-overlay {
   position: fixed;
