@@ -6,22 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="img/logo-milver.jpg" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="stylesheet" href="css/milver.css?v=10" />
-    <link rel="stylesheet" href="css/milver-admin.css?v=10" />
+    <link rel="stylesheet" href="css/milver.css?v=11" />
+    <link rel="stylesheet" href="css/milver-admin.css?v=11" />
   </head>
 
   <body class="mva-body">
-    <!-- LOGIN -->
-    <div id="loginOverlay" class="mv-login-overlay">
-      <div class="mv-login-card">
-        <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img-big" />
-        <p class="mv-login-sub">Panel de administración</p>
-        <label class="mv-label" for="loginPin">PIN de administrador</label>
-        <input id="loginPin" class="mv-input" type="password" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
-        <div id="loginError" class="mv-login-error" style="display:none"></div>
-        <button type="button" id="loginBtn" class="mv-btn mv-btn-primary" onclick="doLogin()">Ingresar</button>
-      </div>
-    </div>
+    <!-- Acceso sin clave: el panel entra directo, sin ventana de login. -->
 
     <header class="mva-header">
       <img src="img/logo-milver.jpg" alt="Milver" class="mv-logo-img" />
@@ -224,6 +214,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="milver-admin.js?v=10"></script>
+    <script src="milver-admin.js?v=11"></script>
   </body>
 </html>

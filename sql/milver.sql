@@ -1200,3 +1200,40 @@ end $$;
 -- guarda el nombre). El login del portal (rol Armador) y el standalone del
 -- depósito ya no piden PIN.
 -- ============================================================
+
+-- ============================================================
+-- v18 — ACCESO SIN CLAVE (temporal, "por ahora").
+-- Comisionistas y admin entran SIN PIN. Se mantienen las firmas de
+-- las funciones para no romper el cliente: el frontend sigue pasando
+-- p_pin (vacío o cualquier valor) y el servidor lo ignora.
+-- Los operarios (depósito) ya entraban sin PIN desde v14.
+-- Aplicado en Supabase el 2026-08-24 (migración milver_v18_acceso_sin_clave).
+-- ============================================================
+
+-- Comisionista: login por nombre, sin PIN.
+create or replace function public.milver_login(p_nombre text, p_pin text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare c record; v_usuario text;
+begin
+  v_usuario := lower(trim(p_nombre));
+  select id, nombre into c from milver_comisionistas
+   where lower(nombre) = v_usuario and activo
+   order by id limit 1;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Comisionista no encontrado');
+  end if;
+  return jsonb_build_object('ok', true, 'id', c.id, 'nombre', c.nombre);
+end $$;
+
+-- Helper usado por TODAS las RPC de comisionista: valida por id, sin PIN.
+create or replace function public.milver_com_nombre(p_id integer, p_pin text)
+returns text language sql security definer set search_path = public, extensions stable as $$
+  select nombre from milver_comisionistas where id = p_id and activo;
+$$;
+
+-- Admin: acceso sin PIN (temporal).
+create or replace function public.milver_admin_ok(p_pin text)
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
+begin
+  return true;
+end $$;
